@@ -1,228 +1,126 @@
 # SocrateAI-Lean-Lib 🔬📐
 
-> **A Formal Lean 4 Foundation & Tooling Ecosystem for Scientific Papers, Theories, and Empirical Research.**
+> **Formal Lean 4 Library and Scientific Foundation for Advanced Research, Theories, and Non-Anthropocentric Mathematics.**
 
 [![Lean 4](https://img.shields.io/badge/Lean-4.33.1-blue.svg)](https://lean-lang.org/)
-[![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
-
----
-
-## 🌟 Vision: Making Lean 4 the Foundation of Science
-
-Modern scientific literature faces reproducibility challenges: implicit assumptions, unstated regimes of validity, unit/dimensional mistakes, and gaps between theoretical models and empirical evidence.
-
-**SocrateAI-Lean-Lib** (`Socrate`) establishes a rigorous, machine-checked bridge between scientific inquiry and Lean 4's interactive theorem proving environment. It equips researchers, theorists, and AI agents with:
-
-1. **Epistemological Ontologies**: First-class representations of scientific papers, claims, empirical findings, theoretical postulates, approximations, and Popperian falsification criteria.
-2. **Type-Safe Dimensional Analysis**: Compile-time verification of SI physical dimensions ($L, M, T, I, \Theta, N, J$) and units, eliminating unphysical equations before proof attempts.
-3. **Theoretical Modeling Framework**: Discrete and continuous dynamical systems, state trajectories, equilibria, and invariant conservation laws.
-4. **Empirical & Statistical Framework**: Measurements with quantified uncertainty ($\pm \sigma$), automated Gaussian error propagation, and statistical hypothesis testing structures.
-5. **Metaprogramming & Scientific DSL**: Custom attributes (`@[paper_claim]`, `@[falsifiable]`, `@[empirical_assumption]`) and interactive commands (`#inspect_claim`).
-6. **CLI Tooling (`lake exe socrate`)**: Command-line workflows to scaffold new paper formalizations, audit claims, and inspect literature repositories.
 
 ---
 
 ## 🏛️ Project Architecture
 
+The project structure strictly adheres to the scientific formalization architecture:
+
 ```
 SocrateAI-Lean-Lib/
-├── lakefile.lean                  # Lake package, Socrate library, and socrate executable
-├── lean-toolchain                 # Pinned to leanprover/lean4:v4.33.1
-├── Socrate.lean                   # Root library interface
-├── Socrate/
-│   ├── Main.lean                  # CLI utility implementation
-│   ├── Core/
-│   │   ├── Ontology.lean          # Scientific domains, claim types, evidence levels, falsification
-│   │   └── Paper.lean             # Paper metadata, claim registry, and provenance manifests
-│   ├── Dimensions/
-│   │   ├── Base.lean              # 7 SI base dimensions vector arithmetic & Quantity types
-│   │   └── Units.lean             # SI units, physical constants, dimensional consistency theorems
-│   ├── Theory/
-│   │   ├── DynamicalSystem.lean   # Trajectories, equilibria, and invariant conservation theorems
-│   │   └── Approximation.lean     # Perturbation theory, asymptotic bounds, and linearization
-│   ├── Empirical/
-│   │   ├── Measurement.lean       # Uncertain measurements (v ± σ) & Gaussian error propagation
-│   │   └── HypothesisTesting.lean # H₀, H₁, significance level α, power, and replicability
-│   ├── Meta/
-│   │   ├── Attributes.lean        # Attributes: @[paper_claim], @[falsifiable], @[empirical_assumption]
-│   │   └── Commands.lean          # Command: #inspect_claim
-│   └── Examples/
-│       ├── ClassicalMechanics.lean # Newton (1687): Second Law, Hooke's Law & Energy dimensional proofs
-│       ├── InformationTheory.lean  # Shannon (1948): Entropy, Mutual Info, and independence theorem
-│       ├── EpidemiologySIR.lean    # Kermack & McKendrick (1927): SIR Model & Population conservation
-│       └── MLTheoryPAC.lean        # Valiant (1984): PAC Generalization & Sample Complexity bounds
-└── README.md
+├── lakefile.lean                     # Configuration Lake
+├── lean-toolchain                    # Version de Lean 4 (leanprover/lean4:v4.33.1)
+├── README.md                         # Documentation principale
+├── LICENSE                           # Licence (MIT)
+├── Lean/
+│   ├── SocrateAI.lean                # Racine de la bibliothèque principale
+│   ├── SocrateAI/                    # Namespace principal
+│   │   ├── Core/                     # Lemmes et théorèmes de base
+│   │   │   ├── Algebra.lean          # Algèbre (AM-GM, Cauchy-Schwarz, inégalités)
+│   │   │   ├── Topology.lean         # Topologie (K3, T², caractéristique d'Euler)
+│   │   │   ├── Analysis.lean         # Analyse (Navier-Stokes, enstrophie, dissipation)
+│   │   │   └── Logic.lean            # Logique (tiers exclu, modus tollens, soundness)
+│   │   ├── Duality/                  # T-dualité et échelles effectives
+│   │   │   ├── DualScale.lean        # Modèle Dual-Scale
+│   │   │   ├── T_Duality.lean        # Preuves de T-dualité (R ↔ α'/R)
+│   │   │   └── EffectiveScale.lean   # Échelles effectives (Planck, string, KK)
+│   │   ├── K3/                       # Théorie des surfaces K3
+│   │   │   ├── K3Surfaces.lean       # Définitions des surfaces K3 (b₂ = 22, Hodge)
+│   │   │   ├── CooperSym2.lean       # Preuves de Sym²(L₂) = L₃
+│   │   │   └── FDM_Candidates.lean   # Candidats pour la matière noire floue (axions K3)
+│   │   ├── Ramanujan/                # Crible miroir symétrique
+│   │   │   ├── RAMA.lean             # RAMA Engine (formes modulaires, fonction tau)
+│   │   │   ├── CallensAlixKernel.lean # Définition du crible S₂₀
+│   │   │   └── ShadowBridge.lean     # Preuves de complétion modulaire
+│   │   ├── NavierStokes/             # Équations de Navier-Stokes
+│   │   │   ├── HypothesisU.lean      # Hypothèse U & critère BKM
+│   │   │   ├── Enstrophy.lean        # Définition de l'enstrophie & vortex stretching
+│   │   │   └── FrustrationIndex.lean # Indice de frustration triadique
+│   │   ├── StringTheory/             # Théorie des cordes
+│   │   │   ├── FTheory.lean          # Compactifications F-theory, fibrations elliptiques
+│   │   │   ├── Swampland.lean        # Conjectures de Swampland (SDC, WGC, de Sitter)
+│   │   │   └── K3xT2.lean            # Compactification K3 × T²
+│   │   └── AlienMath/                # Mathématiques non-anthropocentriques
+│   │       ├── KalChargingMatrix.lean # Algèbre de Kal & charging operators
+│   │       ├── KalHolographicBorderRank.lean # Rang holographique & bornes Ryu-Takayanagi
+│   │       └── ExactRationalWitness.lean # Témoins rationnels & certificats SOS
+│   ├── Tests.lean                    # Racine de la suite de tests
+│   └── Tests/                        # Tests unitaires
+│       ├── TestCore.lean             # Tests pour Core/
+│       ├── TestDuality.lean          # Tests pour Duality/
+│       ├── TestK3.lean               # Tests pour K3/
+│       ├── TestRamanujan.lean        # Tests pour Ramanujan/
+│       ├── TestNavierStokes.lean     # Tests pour NavierStokes/
+│       └── TestStringTheory.lean     # Tests pour StringTheory/
+└── scripts/                          # Scripts utilitaires
+    ├── verify.sh                     # Vérification des preuves
+    └── build.sh                      # Build complet
 ```
 
 ---
 
-## 🚀 Quickstart
+## 🔬 Scientific & Mathematical Overview
 
-### Prerequisites
-- [Elan](https://github.com/leanprover/elan) (Lean version manager)
-- Lean 4 toolchain `leanprover/lean4:v4.33.1` (automatically resolved via `lean-toolchain`)
+### 1. `Core/`
+- **Algebra**: Pure constructive proof of integer square non-negativity (`int_sq_nonneg`), 2D Lagrange identity, Cauchy-Schwarz inequality, and AM-GM defect non-negativity.
+- **Topology**: Betti numbers and Euler characteristics for $T^2$ ($\chi=0$), $K3$ ($\chi=24$), and Cartesian product topology ($\chi(K3 \times T^2) = 0$).
+- **Analysis**: Kinetic energy, enstrophy, palinstrophy, and machine-checked proof of viscous dissipation non-positivity ($\frac{dE}{dt} = -2\nu\Omega \le 0$).
+- **Logic**: Law of Excluded Middle, double negation elimination, scientific modus tollens (Popperian falsification), and consistency.
 
-### 1. Build the Entire Library and Tooling
+### 2. `Duality/`
+- **DualScale**: Dual-scale reciprocity $L^\vee = L_*^2 / L$, symmetry of dual pairing, and self-dual scale invariants.
+- **T_Duality**: String compactification on $S^1$, winding and momentum quantum numbers $(n, w) \leftrightarrow (w, n)$, and mass spectrum invariance at the self-dual radius $R = \sqrt{\alpha'}$.
+- **EffectiveScale**: Hierarchy of physical mass energy scales $M_{EW} \le M_{KK} \le M_s \le M_{Pl}$, transitivity, and Planck-string volume relation.
 
+### 3. `K3/`
+- **K3Surfaces**: Calabi-Yau 2-fold Hodge diamond ($h^{2,0}=1, h^{1,1}=20$), second Betti number $b_2(K3) = 22$, lattice decomposition $3U \oplus 2E_8(-1)$, and signature $\sigma = -16$.
+- **CooperSym2**: Symmetric square representation $\dim(\text{Sym}^2(L_2)) = 3$ ($L_3$) and proof of the Veronese quadric invariant for Cooper pair states.
+- **FDM_Candidates**: Fuzzy Dark Matter ultralight axions from K3 compactifications, de Broglie length scale ($\sim \text{kpc}$), and instanton mass suppression exponents.
+
+### 4. `Ramanujan/`
+- **RAMA**: RAMA Engine, Ramanujan tau function $\tau(n)$ multiplicativity ($\tau(6) = \tau(2)\tau(3) = -6048$), prime power recurrence, and modulus 691.
+- **CallensAlixKernel**: $S_{20}$ symmetric mirror sieve kernel $K_{20}$, reflection involution around center 10, and kernel non-negativity.
+- **ShadowBridge**: Holographic shadow modular completion and exact anomaly cancellation proofs.
+
+### 5. `NavierStokes/`
+- **HypothesisU**: Beale-Kato-Majda (BKM) regularity criterion $\int_0^T \|\omega\|_{L^\infty} dt < \infty$ and finite-time blowup prevention under uniform bound $M$.
+- **Enstrophy**: Enstrophy balance equation $\frac{d\Omega}{dt} = W - 2\nu P$ and machine-checked proof of global 2D enstrophy decay ($W_{2D} = 0 \implies \frac{d\Omega}{dt} \le 0$).
+- **FrustrationIndex**: Resonant triad closure ($k + p + q = 0$), triadic frustration index, and complete arrest theorem for 100% frustration.
+
+### 6. `StringTheory/`
+- **FTheory**: Elliptic fibrations in 12D F-theory, Weierstrass discriminant $\Delta = 4f^3 + 27g^2$, Kodaira fiber classification, and 7-brane loci.
+- **Swampland**: Swampland Distance Conjecture (exponential mass tower suppression), Weak Gravity Conjecture ($q \ge m$), and refined de Sitter gradient bounds.
+- **K3xT2**: Compactification on $K3 \times T^2$ to 4D with $\mathcal{N}=4$ supersymmetry (16 supercharges), duality with Heterotic on $T^6$, and Euler characteristic vanishing.
+
+### 7. `AlienMath/`
+- **KalChargingMatrix**: $2 \times 2$ Kal charging matrix algebra, total invariant charge conservation, and charging potential non-negativity.
+- **KalHolographicBorderRank**: Tensor rank vs border rank, submultiplicativity under Kronecker product, and Ryu-Takayanagi holographic area bounds.
+- **ExactRationalWitness**: Exact rational intervals and certified quadratic Sum-of-Squares (SOS) non-negativity theorems without floating-point error.
+
+---
+
+## 🚀 Execution & Verification
+
+### Build the entire library and test suite:
 ```bash
 lake build
+# or using the provided script:
+./scripts/build.sh
 ```
 
-This compiles the `Socrate` core library and produces the native executable binary in `.lake/build/bin/socrate`.
-
-### 2. Run the Socrate CLI Utility
-
+### Run proof verification:
 ```bash
-# View system information and supported scientific domains
-lake exe socrate info
-
-# List formalized scientific papers in the project
-lake exe socrate list-papers
-
-# Inspect a specific formalized scientific paper
-lake exe socrate show-paper newton1687
-lake exe socrate show-paper kermack1927
-lake exe socrate show-paper shannon1948
-lake exe socrate show-paper valiant1984
-
-# Scaffold a new scientific paper formalization template
-lake exe socrate scaffold MyNewPaper
+./scripts/verify.sh
 ```
-
----
-
-## 🧪 Core Concepts & Examples
-
-### 1. Compile-Time Type-Safe Dimensional Analysis
-
-In `Socrate.Dimensions`, physical quantities carry their SI dimensions in their Lean types. Equations that do not balance dimensionally fail to compile:
-
-```lean
-import Socrate.Dimensions.Units
-
-open Socrate.Dimensions
-open Socrate.Dimensions.SI
-
--- Force is defined with Mass and Acceleration:
-def force (m : Mass Float) (a : Acceleration Float) : Force Float :=
-  ⟨m.val * a.val⟩
-
--- Theorem: Multiplying Mass by Acceleration strictly equals Force dimensionally
-theorem newton_valid : dimMul dimMass dimAcceleration = dimForce := by
-  rfl
-
--- Theorem: Spring constant [M·T⁻²] multiplied by displacement [L] yields Force [M·L·T⁻²]
-theorem hooke_valid : dimMul dimSpringConstant dimLength = dimForce := by
-  rfl
-```
-
-### 2. Verified Conservation Laws in Dynamical Systems
-
-In `Socrate.Theory`, physical and biological invariants are verified across state trajectories using Lean's induction tactics:
-
-```lean
-import Socrate.Theory.DynamicalSystem
-
-open Socrate.Theory
-
--- For any discrete dynamical system with a conserved observable Q:
--- Q(s_{t+1}) = Q(s_t) implies Q(s_t) = Q(s_0) for all t ∈ ℕ:
-#check DiscreteDynamicalSystem.conserved_along_trajectory
-```
-
-In `Socrate.Examples.EpidemiologySIR`, Kermack & McKendrick's compartmental SIR model is proven to conserve total population:
-```lean
-theorem sir_step_conserves_population (trans : SIRTransition) (s : SIRState) :
-    totalPopulation (sirStep trans s) = totalPopulation s := by
-  dsimp [totalPopulation, sirStep]
-  omega
-```
-
-### 3. Empirical Evidence with Error Propagation
-
-In `Socrate.Empirical`, experimental measurements track uncertainty and support automated Gaussian error propagation:
-
-```lean
-import Socrate.Empirical.Measurement
-
-open Socrate.Empirical
-open Socrate.Dimensions
-
--- Measure two independent lengths:
-def l1 : Measurement dimLength := { value := 10.0, uncertainty := 0.2 }
-def l2 : Measurement dimLength := { value := 5.0,  uncertainty := 0.1 }
-
--- Combined measurement with propagated uncertainty: σ = √(0.2² + 0.1²) ≈ 0.2236
-def totalLength := l1.add l2
-
--- Check consistency with theoretical prediction within 2σ bounds:
-#eval totalLength.isConsistentWithTheory 15.1 (k := 2.0)
-```
-
-### 4. Scientific Metaprogramming & Inspection
-
-Annotate declarations with their epistemological status:
-
-```lean
-import Socrate.Meta.Attributes
-import Socrate.Meta.Commands
-
-namespace MyPaper
-
-open Socrate.Meta
-
-@[empirical_assumption]
-def flatSpacetimeAssumption : Prop := True
-
-@[paper_claim]
-theorem energy_conservation : True := by trivial
-
-#inspect_claim energy_conservation
-
-end MyPaper
-```
-
-Output:
-```
-═══════════════════════════════════════════════════════
-🔬 Scientific Declaration: MyPaper.energy_conservation [CLAIM] 
-Type: True
-Is Paper Claim: true
-Is Empirical Assumption: false
-═══════════════════════════════════════════════════════
-```
-
----
-
-## 📚 Exemplar Formalized Scientific Literature
-
-| ID | Title | Authors | Year | Domain | Key Formalized Result |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `newton1687` | *Philosophiae Naturalis Principia Mathematica* | I. Newton | 1687 | Physics | Newton's 2nd Law, Hooke's Law & Kinetic/Potential Energy Dimensional Invariants |
-| `shannon1948` | *A Mathematical Theory of Communication* | C. Shannon | 1948 | Computer Science | Discrete Shannon Entropy, Mutual Information, Independence Vanishing Theorem |
-| `kermack1927` | *A Contribution to the Mathematical Theory of Epidemics* | W. Kermack, A. McKendrick | 1927 | Medicine & Biology | SIR Model, Population Invariant Conservation ($S+I+R=N$), $R_0$ Threshold |
-| `valiant1984` | *A Theory of the Learnable* | L. Valiant | 1984 | AI & ML Theory | PAC Learning Model, Sample Complexity Distributivity Bound |
-
----
-
-## 🔌 Optional Mathlib Integration
-
-The core library is designed to be lightweight and compile in **< 5 seconds** with zero external dependencies.
-
-To enable **Mathlib** for advanced measure theory, manifold topology, or functional analysis:
-1. Open `lakefile.lean`
-2. Uncomment:
-   ```lean
-   require "leanprover-community" / "mathlib" @ git "v4.33.1"
-   ```
-3. Run:
-   ```bash
-   lake update && lake exe cache get && lake build
-   ```
 
 ---
 
 ## 📄 License
 
-Licensed under the Apache License, Version 2.0.
+Licensed under the [MIT License](LICENSE).
