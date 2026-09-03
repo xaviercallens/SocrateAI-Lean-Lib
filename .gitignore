@@ -1,0 +1,12 @@
+# Lean build artifacts
+.lake/
+build/
+*.olean
+*.ilean
+*.c
+*.o
+*.trace
+*~
+.DS_Store
+.elan/
+lake-packages/
