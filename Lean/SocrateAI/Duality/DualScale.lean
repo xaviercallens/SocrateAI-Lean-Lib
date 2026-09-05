@@ -2,6 +2,18 @@
 Copyright (c) 2026 SocrateAI Contributors. All rights reserved.
 Released under MIT license as described in the file LICENSE.
 Authors: SocrateAI Team
+
+## Scientific References
+
+- [GPR1994] Giveon, A.; Porrati, M.; Rabinovici, E.
+  *Target Space Duality in String Theory*.
+  arXiv: hep-th/9401139. DOI: 10.1016/0370-1573(94)00084-G
+  — T-duality R → α'/R, self-dual radius, moduli space geometry.
+
+- [Polchinski1998] Polchinski, J.
+  *String Theory, Volume I*. Cambridge, 1998.
+  DOI: 10.1017/CBO9780511816079
+  — Dual length L∨ = L*²/L, product invariant L·L∨ = L*².
 -/
 
 namespace SocrateAI.Duality.DualScale

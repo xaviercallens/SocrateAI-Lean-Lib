@@ -2,6 +2,21 @@
 Copyright (c) 2026 SocrateAI Contributors. All rights reserved.
 Released under MIT license as described in the file LICENSE.
 Authors: SocrateAI Team
+
+## Scientific References
+
+- [Aspinwall1996] Aspinwall, P.S. *K3 Surfaces and String Duality*.
+  arXiv: hep-th/9611137 — χ(K3) = 24, dim_ℝ(K3) = 4.
+
+- [Sen1995] Sen, A. *String String Duality in Six Dimensions*.
+  arXiv: hep-th/9504027 — Heterotic / Type II duality on K3.
+
+- [HullTownsend1995] Hull, C.M.; Townsend, P.K. *Unity of Superstring Dualities*.
+  arXiv: hep-th/9410167 — N=4 supersymmetry from K3×T², 16 supercharges.
+
+- [BHPV2004] Barth, Hulek, Peters, Van de Ven.
+  *Compact Complex Surfaces*. DOI: 10.1007/978-3-642-57739-0
+  — K3 Betti numbers, χ(K3×T²) = 24 × 0 = 0.
 -/
 import SocrateAI.Core.Topology
 import SocrateAI.K3.K3Surfaces

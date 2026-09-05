@@ -10,3 +10,15 @@ import Tests.TestK3
 import Tests.TestRamanujan
 import Tests.TestNavierStokes
 import Tests.TestStringTheory
+import Tests.TestStringInequalities
+import Tests.TestPregeometry
+import Tests.TestQuantum
+import Tests.TestQuantumM24
+import Tests.TestMoonshine
+import Tests.TestInflation
+import Tests.TestCosmology
+import Tests.TestChameleonGravity
+import Tests.TestAlienMath
+import Tests.TestExtremalEta
+import Tests.TestPoincare
+import Tests.TestTierCalculus

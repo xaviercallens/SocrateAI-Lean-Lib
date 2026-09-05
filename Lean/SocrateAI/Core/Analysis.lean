@@ -4,6 +4,30 @@ Released under MIT license as described in the file LICENSE.
 Authors: SocrateAI Team
 -/
 
+/-!
+# Core Analysis: Navier-Stokes Energy & Enstrophy Estimates
+
+## Scientific References
+
+- [FMRT2001] Foias, C.; Manley, O.; Rosa, R.; Temam, R.
+  *Navier-Stokes Equations and Turbulence*. Cambridge, 2001.
+  DOI: 10.1017/CBO9780511546754
+  — Energy dissipation rate dE/dt = -2νΩ, enstrophy evolution, Poincaré inequality.
+
+- [DoeringGibbon1995] Doering, C.R.; Gibbon, J.D.
+  *Applied Analysis of the Navier-Stokes Equations*. Cambridge, 1995.
+  DOI: 10.1017/CBO9780511608803
+  — BKM criterion, palinstrophy, vortex stretching bounds.
+
+## Tier Classification
+
+- `kineticEnergy`, `enstrophy`, `palinstrophy`, `enstrophyRate`: **Tier X**
+  (Float-based, not kernel-verifiable. Provided for numerical illustration only.)
+- `dissipation_nonpositive`, `dissipation_nonpositive_int`: **Tier A**
+  (Integer-exact, kernel-verified, sorry-free.)
+- `PoincareBound`: **Tier X** (Float > 0.0 is not decidable in Lean 4 core.)
+-/
+
 namespace SocrateAI.Core.Analysis
 
 /-- Kinetic energy $E = \frac{1}{2} \|u\|_{L^2}^2$. -/

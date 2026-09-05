@@ -4,6 +4,32 @@ Released under MIT license as described in the file LICENSE.
 Authors: SocrateAI Team
 -/
 
+/-!
+# Core Topology: Betti Numbers & Euler Characteristics
+
+## Scientific References
+
+- [BHPV2004] Barth, Hulek, Peters, Van de Ven.
+  *Compact Complex Surfaces*. Springer, 2004.
+  DOI: 10.1007/978-3-642-57739-0
+  — Standard classification of K3 surfaces: b₀=1, b₁=0, b₂=22, b₃=0, b₄=1.
+
+- [GH1978] Griffiths, P.; Harris, J.
+  *Principles of Algebraic Geometry*. Wiley, 1978.
+  DOI: 10.1002/9781118032527
+  — Hodge decomposition, Lefschetz (1,1) theorem, Betti number computation.
+
+- [Aspinwall1996] Aspinwall, P.S.
+  *K3 Surfaces and String Duality*.
+  arXiv: hep-th/9611137
+  — χ(K3) = 24, Euler characteristic product formula for K3 × T².
+
+- [Polchinski1998] Polchinski, J.
+  *String Theory, Volume I*. Cambridge, 1998.
+  DOI: 10.1017/CBO9780511816079
+  — Torus T² topology: b₀=1, b₁=2, b₂=1, χ(T²) = 0.
+-/
+
 namespace SocrateAI.Core.Topology
 
 /-- Betti numbers of a 4-dimensional compact orientable manifold $(b_0, b_1, b_2, b_3, b_4)$. -/

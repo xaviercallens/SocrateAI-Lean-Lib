@@ -2,6 +2,25 @@
 Copyright (c) 2026 SocrateAI Contributors. All rights reserved.
 Released under MIT license as described in the file LICENSE.
 Authors: SocrateAI Team
+
+## Scientific References
+
+- [Vafa2005] Vafa, C. *The String Landscape and the Swampland*.
+  arXiv: hep-th/0509212 — Not all QFTs can be UV-completed in string theory.
+
+- [OoguriVafa2007] Ooguri, H.; Vafa, C.
+  *On the Geometry of the String Landscape and the Swampland*.
+  arXiv: hep-th/0605264. DOI: 10.1016/j.nuclphys.2007.04.022
+  — Distance Conjecture: infinite tower becomes light at large field distance.
+
+- [Obied2018] Obied, G.; Ooguri, H.; Spodyneiko, L.; Vafa, C.
+  *de Sitter Space and the Swampland*. arXiv: 1806.08362
+  — Refined de Sitter conjecture: |∇V| ≥ c·V or min(∇²V) ≤ -c'·V.
+
+- [Arkani-Hamed2007] Arkani-Hamed, N.; Motl, L.; Nicolis, A.; Vafa, C.
+  *The String Landscape, Black Holes and Gravity as the Weakest Force*.
+  arXiv: hep-th/0601001. DOI: 10.1088/1126-6708/2007/06/060
+  — Weak Gravity Conjecture: q ≥ m in Planck units.
 -/
 
 namespace SocrateAI.StringTheory.Swampland

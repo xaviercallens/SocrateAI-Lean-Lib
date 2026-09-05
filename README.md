@@ -16,51 +16,38 @@ The project structure strictly adheres to the scientific formalization architect
 SocrateAI-Lean-Lib/
 ├── lakefile.lean                     # Configuration Lake
 ├── lean-toolchain                    # Version de Lean 4 (leanprover/lean4:v4.33.1)
-├── README.md                         # Documentation principale
 ├── LICENSE                           # Licence (MIT)
 ├── Lean/
 │   ├── SocrateAI.lean                # Racine de la bibliothèque principale
-│   ├── SocrateAI/                    # Namespace principal
-│   │   ├── Core/                     # Lemmes et théorèmes de base
-│   │   │   ├── Algebra.lean          # Algèbre (AM-GM, Cauchy-Schwarz, inégalités)
-│   │   │   ├── Topology.lean         # Topologie (K3, T², caractéristique d'Euler)
-│   │   │   ├── Analysis.lean         # Analyse (Navier-Stokes, enstrophie, dissipation)
-│   │   │   └── Logic.lean            # Logique (tiers exclu, modus tollens, soundness)
-│   │   ├── Duality/                  # T-dualité et échelles effectives
-│   │   │   ├── DualScale.lean        # Modèle Dual-Scale
-│   │   │   ├── T_Duality.lean        # Preuves de T-dualité (R ↔ α'/R)
-│   │   │   └── EffectiveScale.lean   # Échelles effectives (Planck, string, KK)
-│   │   ├── K3/                       # Théorie des surfaces K3
-│   │   │   ├── K3Surfaces.lean       # Définitions des surfaces K3 (b₂ = 22, Hodge)
-│   │   │   ├── CooperSym2.lean       # Preuves de Sym²(L₂) = L₃
-│   │   │   └── FDM_Candidates.lean   # Candidats pour la matière noire floue (axions K3)
-│   │   ├── Ramanujan/                # Crible miroir symétrique
-│   │   │   ├── RAMA.lean             # RAMA Engine (formes modulaires, fonction tau)
-│   │   │   ├── CallensAlixKernel.lean # Définition du crible S₂₀
-│   │   │   └── ShadowBridge.lean     # Preuves de complétion modulaire
-│   │   ├── NavierStokes/             # Équations de Navier-Stokes
-│   │   │   ├── HypothesisU.lean      # Hypothèse U & critère BKM
-│   │   │   ├── Enstrophy.lean        # Définition de l'enstrophie & vortex stretching
-│   │   │   └── FrustrationIndex.lean # Indice de frustration triadique
-│   │   ├── StringTheory/             # Théorie des cordes
-│   │   │   ├── FTheory.lean          # Compactifications F-theory, fibrations elliptiques
-│   │   │   ├── Swampland.lean        # Conjectures de Swampland (SDC, WGC, de Sitter)
-│   │   │   └── K3xT2.lean            # Compactification K3 × T²
-│   │   └── AlienMath/                # Mathématiques non-anthropocentriques
-│   │       ├── KalChargingMatrix.lean # Algèbre de Kal & charging operators
-│   │       ├── KalHolographicBorderRank.lean # Rang holographique & bornes Ryu-Takayanagi
-│   │       └── ExactRationalWitness.lean # Témoins rationnels & certificats SOS
+│   ├── SocrateAI/                    # Namespace principal (14 domaines formels)
+│   │   ├── Core/                     # Lemmes et théorèmes de base (Algèbre, Topologie, Analyse, Logique)
+│   │   ├── Duality/                  # T-dualité, Dual-Scale, échelles effectives
+│   │   ├── K3/                       # Géométrie K3, Hodge, Cooper Sym², axions FDM
+│   │   ├── Ramanujan/                # RAMA Engine, crible S₂₀, modular completion
+│   │   ├── NavierStokes/             # Hypothèse U, critère BKM, frustration triadique
+│   │   ├── StringTheory/             # F-theory, Swampland, K3 × T², 19 inégalités de cordes
+│   │   ├── Pregeometry/              # Pré-géométrie discrète K₄, spectre Laplacien, suppression ORF
+│   │   ├── Quantum/                  # Codes de Golay [[24,0,8]], 24 modes de Majorana, Golay M₂₄
+│   │   ├── Moonshine/                # η-quotient RAMA niveau 12, bispectre Mathieu, énergie du vide
+│   │   ├── Inflation/                # Observables inflationnaires (r = 12/Ne², ns = 53/55, LiteBIRD)
+│   │   ├── Cosmology/                # Évidence bayésienne, χ² DESI BAO, amélioration JWST high-z
+│   │   ├── ChameleonGravity/         # Gravité caméléon inversée (modèle DAC, NGC 1052-DF2, Cassini)
+│   │   ├── AlienMath/                # Algèbre non-anthropocentrique, témoins rationnels SOS
+│   │   └── Generated/                # Squelettes blueprint auto-générés (quarantaine stricte)
 │   ├── Tests.lean                    # Racine de la suite de tests
-│   └── Tests/                        # Tests unitaires
-│       ├── TestCore.lean             # Tests pour Core/
-│       ├── TestDuality.lean          # Tests pour Duality/
-│       ├── TestK3.lean               # Tests pour K3/
-│       ├── TestRamanujan.lean        # Tests pour Ramanujan/
-│       ├── TestNavierStokes.lean     # Tests pour NavierStokes/
-│       └── TestStringTheory.lean     # Tests pour StringTheory/
-└── scripts/                          # Scripts utilitaires
-    ├── verify.sh                     # Vérification des preuves
-    └── build.sh                      # Build complet
+│   └── Tests/                        # Tests unitaires pour l'ensemble des 14 domaines
+├── scripts/                          # Outils d'automatisation & vérification formelle
+│   ├── verify.sh                     # Pipeline d'audit et vérification en 5 étapes
+│   ├── audit_axioms.py               # Audit strict des axiomes noyau Lean 4 (#print axioms)
+│   ├── check_olean_kernel.sh         # Vérification d'intégrité noyau .olean (lean4checker)
+│   ├── quickwin_blueprint.py         # Générateur de squelettes blueprint & DAG Mermaid
+│   └── external_library_sync.py      # Pont ontologique Mathlib, Physlib, TNLean, Arithmon
+└── docs/                             # Documentation, manifestes & graphes DAG
+    ├── BLUEPRINT_DAG.md              # Graphe de dépendances Mermaid
+    ├── PROOF_MANIFEST.md             # Matrice d'audit des théorèmes
+    ├── AXIOM_AUDIT_REPORT.md         # Rapport d'audit des axiomes noyau
+    ├── EXTERNAL_LIBRARIES.md         # Répertoire des bibliothèques externes et checkers
+    └── GUIDE_FOR_AGENTS.md           # Guide canonique pour les agents IA
 ```
 
 ---
