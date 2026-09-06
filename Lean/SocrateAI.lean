@@ -87,3 +87,8 @@ import SocrateAI.Generated.BlueprintSkeleton
 
 -- Scratch Database for Sub-Articles
 import SocrateAI.LeanScratchDB
+import SocrateAI.ModularForms.FrickeInvolution
+import SocrateAI.FinalCheck
+import SocrateAI.ModularForms.FrickeSlash
+import SocrateAI.ModularForms.FrickeModular
+import SocrateAI.ModularForms.FrickeComposite
