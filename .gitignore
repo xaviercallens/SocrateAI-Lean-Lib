@@ -11,3 +11,10 @@ build/
 .elan/
 lake-packages/
 local-packages.json
+
+# ad-hoc proof probes; the published negative controls live in verification/
+scratch/
+*.bak
+*.bak-*
+lake_build.log
+*.code-workspace

@@ -65,7 +65,7 @@ machine with too little free disk to hold a second Mathlib.
 lake build SocrateAI                       # 0 errors, 0 sorry
 grep -c '#guard_msgs' Lean/SocrateAI/FinalCheck.lean   # 391 axiom guards
 python3 dag/check_dag.py                   # every "proved" node names a real declaration
-lake env lean scratch/GuardNegativeControl.lean   # MUST FAIL — else the guards are vacuous
+lake env lean verification/GuardNegativeControl.lean  # MUST FAIL — else the guards are vacuous
 ```
 
 The last one matters most. A guard that cannot fail proves nothing, so the negative control asserts
