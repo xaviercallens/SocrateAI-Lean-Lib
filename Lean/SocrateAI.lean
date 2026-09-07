@@ -92,3 +92,11 @@ import SocrateAI.FinalCheck
 import SocrateAI.ModularForms.FrickeSlash
 import SocrateAI.ModularForms.FrickeModular
 import SocrateAI.ModularForms.FrickeComposite
+
+-- Eta quotients & Ligozat's criterion (F3.1 arithmetic layer, F3.2 analytic layer)
+import SocrateAI.ModularForms.EtaQuotient
+import SocrateAI.ModularForms.EtaQuotientModularity
+import SocrateAI.ModularForms.EtaQuotientPrimeLevel
+-- F3.1-B13 (order at the cusp `∞` in Mathlib's `meromorphicOrderAt` language) and the
+-- F3.1-OBSTRUCTED record (why the other cusps are out of reach).
+import SocrateAI.ModularForms.EtaQuotientCuspOrder
