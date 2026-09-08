@@ -100,3 +100,21 @@ import SocrateAI.ModularForms.EtaQuotientPrimeLevel
 -- F3.1-B13 (order at the cusp `∞` in Mathlib's `meromorphicOrderAt` language) and the
 -- F3.1-OBSTRUCTED record (why the other cusps are out of reach).
 import SocrateAI.ModularForms.EtaQuotientCuspOrder
+
+-- Run 4 (DRK-*): Dedekind sums, Apostol's Φ / Rademacher's Ψ, and the η multiplier system.
+-- DedekindSum + RademacherPhi carry the DRK-00 sign-discipline gate and are import-light on
+-- purpose (no η, no ℍ); EtaMultiplier is where the analysis enters and is entirely `sorry`.
+import SocrateAI.NumberTheory.DedekindSum
+import SocrateAI.NumberTheory.RademacherPhi
+import SocrateAI.NumberTheory.DedekindSumJacobi
+import SocrateAI.ModularForms.EtaMultiplier
+-- DRK-08 (etaMultiplierVal_neg, exists_pos_lower_left_or_T_zpow).  Imports ONLY
+-- EtaQuotientModularity: it uses no Dedekind sum, no Phi, no analysis.  See the file header.
+import SocrateAI.ModularForms.EtaMultiplierNeg
+import SocrateAI.ModularForms.EtaPhiSum
+import SocrateAI.ModularForms.KroneckerJacobi
+-- DRK-11 (run 4): the closed-form eta multiplier vs Ligozat's Kronecker character.  Proved:
+-- the exponential layer (the node reduces to a congruence mod 24), the node's conclusion for
+-- 0 < N <= 4, eleven kernel pins and four negative controls.  UNPROVED: general N (one sorry).
+import SocrateAI.ModularForms.EtaLigozatKronecker
+import SocrateAI.ModularForms.EtaLigozatGeneral

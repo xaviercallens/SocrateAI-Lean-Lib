@@ -7,8 +7,9 @@ lake exe cache get      # ~5 GB of prebuilt Mathlib .olean files — do not skip
 lake build SocrateAI
 ```
 
-Expect ~3469 jobs and **0 errors**. The build target includes `SocrateAI.FinalCheck`, which is the
-point: it carries 391 `#guard_msgs in #print axioms` guards, so **a drifted axiom footprint fails
+Expect ~3767 jobs and **0 errors** (3 `sorry` warnings, all disclosed and DAG-tracked open nodes —
+see `verification/README.md`). The build target includes `SocrateAI.FinalCheck`, which is the
+point: it carries 797 `#guard_msgs in #print axioms` guards, so **a drifted axiom footprint fails
 the build** rather than being silently reported.
 
 ## What is pinned, and why exactly
@@ -62,10 +63,13 @@ machine with too little free disk to hold a second Mathlib.
 ## Checking the artifact yourself
 
 ```bash
-lake build SocrateAI                       # 0 errors, 0 sorry
-grep -c '#guard_msgs' Lean/SocrateAI/FinalCheck.lean   # 391 axiom guards
+lake build SocrateAI                       # 0 errors; 3 sorry, all DAG-tracked open nodes
+grep -c '#guard_msgs' Lean/SocrateAI/FinalCheck.lean   # 797 axiom guards
 python3 dag/check_dag.py                   # every "proved" node names a real declaration
 lake env lean verification/GuardNegativeControl.lean  # MUST FAIL — else the guards are vacuous
+  # NOTE: run this against the shared pool the way `lake build` above did — if you built with
+  # `--packages=local-packages.json`, prefix that flag on `lake build` (not on `lake env lean`,
+  # which does not accept it) so the .lake/build tree it reads from is populated.
 ```
 
 The last one matters most. A guard that cannot fail proves nothing, so the negative control asserts

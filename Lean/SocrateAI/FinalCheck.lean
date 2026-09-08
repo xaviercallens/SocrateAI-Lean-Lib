@@ -31,6 +31,25 @@ import SocrateAI.ModularForms.EtaQuotientCuspOrder
 -- Mathlib's `exp_isBigO_discriminant` in FinalCheck's cone, which is what the external pin
 -- `exp_isBigO_discriminant_of_cusp_order` is checked against.
 import SocrateAI.ModularForms.EtaQuotientCuspTheta
+-- Run 4 (DRK-*).  Importing these HERE is what makes the run-4 axiom audit a build dependency:
+-- the DRK-00 sign-discipline pins, the DRK-01 port, and the INVERTED tripwires certifying that
+-- DRK-02/03/04/05/06/07 and ETA-01 are still UNPROVED, all fail the build if they drift.
+import SocrateAI.NumberTheory.DedekindSum
+import SocrateAI.NumberTheory.RademacherPhi
+import SocrateAI.ModularForms.EtaMultiplier
+import SocrateAI.ModularForms.EtaMultiplierNeg
+import SocrateAI.ModularForms.EtaPhiSum
+import SocrateAI.NumberTheory.DedekindSumJacobi
+import SocrateAI.ModularForms.KroneckerJacobi
+import SocrateAI.ModularForms.EtaLigozatKronecker
+-- ETA-01 (run 5): the c <= 0 reduction, the N <= 4 package, and the N = 17 refutation of the
+-- `12 | k` form.  Importing it here makes the ETA-01 audit -- including the two INVERTED
+-- tripwires certifying that ETA-01 general-N is still open -- a build dependency.
+import SocrateAI.ModularForms.EtaLigozatGeneral
+-- DRK-12 (run 6): Ligozat at level 11.  Importing it here makes the level-11 audit a build
+-- dependency -- including the INVERTED tripwire on `etaProductEleven_via_ligozat_general`, which
+-- is what keeps "ETA-01 is still open" machine-checked rather than asserted.
+import SocrateAI.ModularForms.EtaLigozatLevelEleven
 -- F3.1-B0 build gate: these two Mathlib modules are the analytic prerequisite for every F3.2
 -- node.  Importing them HERE is deliberate — it makes the gate a build dependency of the axiom
 -- audit, so the gate cannot silently regress.
@@ -3389,3 +3408,1743 @@ example {p : ℕ} (hp : p ∈ ({5, 7, 13} : Finset ℕ)) (r : EtaExp) {k : ℤ}
   ligozat_of_prime hp r hk h1 h2 hdvd hγ z
 
 end F32C3Pin
+
+
+/-! ## Run 4 (DRK-*) — Dedekind sums, Apostol's `Φ`, Rademacher's `Ψ`, the `η` multiplier
+
+STATUS OF RUN 4, stated before any guard so it cannot be read off the guards alone: run 4
+delivered a **statement layer** plus **one port**.  Proved and sorry-free: the definitions
+`dedekindSaw`, `dedekindSum`, `rademacherPhi`, `rademacherPsi`, the nineteen `DRK-01` supporting
+lemmas (a PORT of FLT's `Def_NumberTheory_DedekindSum.lean`, see `ATTRIBUTION.md`), and the
+`DRK-00` sign-discipline gate.  UNPROVED, and pinned as unproved by inverted tripwires below:
+`DRK-02` (reciprocity), all three `DRK-03` lemmas, `DRK-04` (the descent step), `DRK-05`,
+`DRK-06` (the closed form of the multiplier), `DRK-07`, and `ETA-01`.
+
+UPDATED 2026-09-07/08 as those nodes closed one by one: `DRK-02`, all three `DRK-03` lemmas
+plus `rademacherPhi_of_pos_toNat`, `DRK-04`, **`DRK-05` (both halves)** and now
+**`DRK-06` (both phrasings, 2026-09-08)** are proved and sorry-free, each with a positive guard
+below.  STILL UNPROVED, and still pinned as unproved by inverted tripwires: `DRK-07`, `ETA-01`.
+
+WHAT DRK-06 IS AND IS NOT.  It is the closed form of the `η` multiplier —
+`η(γz) = e^{πiΦ(γ)/12}·√(-i(cz+d))·η(z)` — for `γ ∈ SL(2,ℤ)` with **`c > 0`**, with `Φ` Apostol's
+`rademacherPhi` and NOT `rademacherPsi` (LL-22).  Its STATEMENT is FLT's; its PROOF is ours
+(Euclidean descent on `c`; `ATTRIBUTION.md` records the split per declaration).  It is proved on
+FLT's own scope, so it is not a weakening of the reference — but `c = 0` and `c < 0` are simply
+NOT covered, and `DRK-05` turned out not to be needed for it at all.
+
+The `F3.2-OBSTRUCTED` obstruction is **NOT** removed by DRK-06 alone, and run 4 did **not** meet
+its stated success criterion.  `ligozat_general` (ETA-01) is still `sorry`: getting there from
+DRK-06 still needs the `c ≤ 0` cases, the conjugated matrices `γ_δ` for each `δ ∣ N`, and the
+product `∏_δ ε(γ_δ)^{r_δ} = 1` under Ligozat's congruences (which is `DRK-07` plus counting).
+Anyone citing run 4 as having removed the obstruction is citing it wrongly. -/
+
+section Run4DedekindRademacher
+
+open SocrateAI.NumberTheory SocrateAI.ModularForms
+open scoped MatrixGroups
+
+-- ---------------------------------------------------------------------------------------
+-- PROVED, sorry-free.  DRK-01 (the port) and DRK-00 (the gate).
+-- ---------------------------------------------------------------------------------------
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSaw' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSaw
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSum' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSaw_neg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSaw_neg
+
+/-- info: 'SocrateAI.NumberTheory.abs_dedekindSaw_lt_half' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.abs_dedekindSaw_lt_half
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSaw_natCast_div' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSaw_natCast_div
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_neg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_neg
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_add_mul' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_add_mul
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_eq_sum_Ico' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_eq_sum_Ico
+
+-- DRK-01, THE REMAINING THIRTEEN.  Together with the eight guards above, all 21 declarations
+-- ported from FLT's `Def_NumberTheory_DedekindSum.lean` are now under an axiom guard, so the
+-- whole port -- not a sample of it -- is a build dependency of the audit.  Re-verified
+-- 2026-09-07 against a fresh fetch of the upstream file: 21 identical, 0 differing, 0 missing.
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSaw_of_fract_eq_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSaw_of_fract_eq_zero
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSaw_of_fract_ne_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSaw_of_fract_ne_zero
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSaw_intCast' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSaw_intCast
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSaw_natCast' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSaw_natCast
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSaw_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSaw_zero
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSaw_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSaw_one
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSaw_add_intCast' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSaw_add_intCast
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSaw_intCast_add' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSaw_intCast_add
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSaw_add_natCast' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSaw_add_natCast
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSaw_half' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSaw_half
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_zero_right' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_zero_right
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_one_right' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_one_right
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_zero_left' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_zero_left
+
+/-- info: 'SocrateAI.NumberTheory.rademacherPhi' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacherPhi
+
+/-- info: 'SocrateAI.NumberTheory.rademacherPsi' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacherPsi
+
+-- DRK-00.  `decide +kernel` adds NO axiom: these two are the gate's axiom audit.  (Had the pins
+-- been done with `native_decide`, `Lean.ofReduceBool` would appear here and this guard would
+-- fail -- which is exactly why the guard is worth having.)
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_five_pin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_five_pin
+
+-- The other five NAMED pins, one per regime (negative `h`; composite `k`; degenerate `k`; a
+-- reciprocity instance; the non-coprime NEGATIVE CONTROL).  Six named, guarded pins in total,
+-- which is what the run brief's "6+ decide pins as guarded lemmas" asks for -- the nineteen
+-- `example`s in the gate already fail the build if wrong, but an `example` has no name and so
+-- cannot be given a `#print axioms` guard.
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_neg_three_seven_pin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_neg_three_seven_pin
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_four_twelve_pin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_four_twelve_pin
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_one_one_pin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_one_one_pin
+
+-- (Lean wraps this one: the declaration name is long enough that the axiom list is
+-- pretty-printed over three lines.  Same footprint as every other pin.)
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_reciprocity_five_twelve_pin' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_reciprocity_five_twelve_pin
+
+-- (Lean wraps this one: the declaration name is long enough that the axiom list is
+-- pretty-printed over three lines.  Same footprint as every other pin.)
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_reciprocity_fails_four_twelve' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_reciprocity_fails_four_twelve
+
+-- ---------------------------------------------------------------------------------------
+-- DRK-02, PROVED 2026-09-07.  THIS GUARD IS THE ONE THAT MATTERS: it is what makes the DAG
+-- node's `status: proved` a build dependency rather than a claim in a JSON file.  If anyone
+-- reintroduces a `sorry` anywhere beneath Dedekind reciprocity -- in the permutation lemma, in
+-- either fibre lemma, in the double count, in the Gauss sums -- `sorryAx` appears here and the
+-- build fails.  `decide +kernel` and `linear_combination` add no axiom of their own; had any pin
+-- been done with `native_decide`, `Lean.ofReduceBool` would appear and this would fail too.
+-- ---------------------------------------------------------------------------------------
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_add_dedekindSum' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_add_dedekindSum
+
+-- DRK-02's own gate: the seven reciprocity pins, four intermediate floor/mod-sum pins, two extra
+-- non-coprime NEGATIVE CONTROLS, and the four individual Dedekind-sum values that stop a
+-- compensating pair of errors from satisfying a reciprocity pin.  Every one is `decide +kernel`
+-- on the DEFINITION -- none is proved by `dedekindSum_add_dedekindSum` -- so together they are an
+-- independent kernel check of the general theorem at seventeen points, not a restatement of it.
+
+-- (Lean wraps the longer names: the axiom list is pretty-printed over three lines.  Same
+-- footprint in every case.)
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_reciprocity_seven_eleven_pin' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_reciprocity_seven_eleven_pin
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_reciprocity_nine_twentyfive_pin' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_reciprocity_nine_twentyfive_pin
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_reciprocity_two_fifteen_pin' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_reciprocity_two_fifteen_pin
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_reciprocity_four_nine_pin' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_reciprocity_four_nine_pin
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_reciprocity_eleven_thirteen_pin' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_reciprocity_eleven_thirteen_pin
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_reciprocity_three_eight_pin' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_reciprocity_three_eight_pin
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_reciprocity_one_one_pin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_reciprocity_one_one_pin
+
+/-- info: 'SocrateAI.NumberTheory.floorSum_id_seven_eleven_pin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.floorSum_id_seven_eleven_pin
+
+/-- info: 'SocrateAI.NumberTheory.floorSum_count_seven_eleven_pin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.floorSum_count_seven_eleven_pin
+
+/-- info: 'SocrateAI.NumberTheory.floorSum_count_eleven_seven_pin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.floorSum_count_eleven_seven_pin
+
+/-- info: 'SocrateAI.NumberTheory.modSum_seven_eleven_pin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.modSum_seven_eleven_pin
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_reciprocity_fails_six_nine' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_reciprocity_fails_six_nine
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_reciprocity_fails_ten_fifteen' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_reciprocity_fails_ten_fifteen
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_seven_eleven_pin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_seven_eleven_pin
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_eleven_seven_pin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_eleven_seven_pin
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_nine_twentyfive_pin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_nine_twentyfive_pin
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_twentyfive_nine_pin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_twentyfive_nine_pin
+
+/-- info: 'SocrateAI.NumberTheory.rademacherPhi_S_pin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacherPhi_S_pin
+
+/-- info: 'SocrateAI.NumberTheory.rademacherPhi_ne_rademacherPsi' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacherPhi_ne_rademacherPsi
+
+-- ---------------------------------------------------------------------------------------
+-- DRK-03 (2026-09-07).  ELEVEN NAMED, AXIOM-GUARDED SIGN-DISCIPLINE PINS, each an instance of
+-- one of the three DRK-03 lemmas, all computed by `decide +kernel` from the DEFINITIONS ALONE
+-- and placed in `RademacherPhi.lean` ABOVE the three proofs, so no pin can be discharged by the
+-- theorem it is pinning.  Every value was recomputed independently in Python
+-- (`fractions.Fraction`) before the Lean was written.  `decide +kernel` adds NO axiom; had
+-- `native_decide` been used, `Lean.ofReduceBool` would appear below and these guards would fail.
+-- ---------------------------------------------------------------------------------------
+
+/-- info: 'SocrateAI.NumberTheory.rademacherPhi_of_pos_pin_c5' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacherPhi_of_pos_pin_c5
+
+/-- info: 'SocrateAI.NumberTheory.rademacherPhi_of_pos_pin_c12' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacherPhi_of_pos_pin_c12
+
+/-- info: 'SocrateAI.NumberTheory.rademacherPhi_of_pos_pin_c1' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacherPhi_of_pos_pin_c1
+
+/-- info: 'SocrateAI.NumberTheory.rademacherPhi_of_pos_fails_c_neg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacherPhi_of_pos_fails_c_neg
+
+/-- info: 'SocrateAI.NumberTheory.rademacherPhi_neg_pin_c_pos' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacherPhi_neg_pin_c_pos
+
+/-- info: 'SocrateAI.NumberTheory.rademacherPhi_neg_pin_c_neg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacherPhi_neg_pin_c_neg
+
+/-- info: 'SocrateAI.NumberTheory.rademacherPhi_neg_pin_c_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacherPhi_neg_pin_c_zero
+
+/-- info: 'SocrateAI.NumberTheory.rademacherPhi_pin_c_zero_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacherPhi_pin_c_zero_value
+
+/-- info: 'SocrateAI.NumberTheory.rademacherPhi_T_zpow_pin_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacherPhi_T_zpow_pin_zero
+
+/-- info: 'SocrateAI.NumberTheory.rademacherPhi_T_zpow_pin_four' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacherPhi_T_zpow_pin_four
+
+/-- info: 'SocrateAI.NumberTheory.rademacherPhi_T_zpow_pin_neg_five' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacherPhi_T_zpow_pin_neg_five
+
+-- ---------------------------------------------------------------------------------------
+-- DRK-03 PROVED (2026-09-07).  Positive guards for the three lemmas and their one helper.
+-- Their INVERTED tripwires (which asserted `sorryAx` was still present) are consequently GONE
+-- from the tripwire block below; this is the receipt for that deletion, on the model of the
+-- DRK-02 receipt, so that a vanished inverted tripwire can never be mistaken for someone
+-- quietly deleting an inconvenient check.  No `sorryAx`, no `Lean.ofReduceBool`.
+-- ---------------------------------------------------------------------------------------
+
+/-- info: 'SocrateAI.NumberTheory.SL2_neg_apply' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.SL2_neg_apply
+
+/-- info: 'SocrateAI.NumberTheory.rademacherPhi_of_pos' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacherPhi_of_pos
+
+/-- info: 'SocrateAI.NumberTheory.rademacherPhi_neg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacherPhi_neg
+
+/-- info: 'SocrateAI.NumberTheory.rademacherPhi_T_zpow' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacherPhi_T_zpow
+
+-- ---------------------------------------------------------------------------------------
+-- DRK-04 PROVED (2026-09-07).  Positive guard for `rademacher_phi_step`, plus the twelve named
+-- instance pins and the three negative controls that were landed and kernel-checked BEFORE the
+-- proof was written.  The INVERTED tripwire for `rademacher_phi_step` (which asserted `sorryAx`
+-- was still in its footprint) is consequently GONE from the tripwire block below; this is the
+-- receipt for that deletion, on the model of the DRK-02 and DRK-03 receipts, so that a vanished
+-- inverted tripwire can never be mistaken for someone quietly deleting an inconvenient check.
+-- No `sorryAx`, no `Lean.ofReduceBool` anywhere below.
+--
+-- The private helper `phi_step_algebra` carries no separate guard: private declarations get
+-- mangled names that `#print axioms` cannot address from here.  It is covered transitively --
+-- if it acquired an axiom, `rademacher_phi_step`'s own footprint below would show it.
+-- ---------------------------------------------------------------------------------------
+
+/-- info: 'SocrateAI.NumberTheory.rademacher_phi_step' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacher_phi_step
+
+/-- info: 'SocrateAI.NumberTheory.rademacher_phi_step_pin_c5_r2' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacher_phi_step_pin_c5_r2
+
+/-- info: 'SocrateAI.NumberTheory.rademacher_phi_step_pin_c5_r7' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacher_phi_step_pin_c5_r7
+
+/-- info: 'SocrateAI.NumberTheory.rademacher_phi_step_pin_c3_r2' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacher_phi_step_pin_c3_r2
+
+/-- info: 'SocrateAI.NumberTheory.rademacher_phi_step_pin_c4_r5' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacher_phi_step_pin_c4_r5
+
+/-- info: 'SocrateAI.NumberTheory.rademacher_phi_step_pin_c1_r1' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacher_phi_step_pin_c1_r1
+
+/-- info: 'SocrateAI.NumberTheory.rademacher_phi_step_pin_c7_r1' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacher_phi_step_pin_c7_r1
+
+/-- info: 'SocrateAI.NumberTheory.rademacher_phi_step_pin_c5_q0' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacher_phi_step_pin_c5_q0
+
+/-- info: 'SocrateAI.NumberTheory.rademacher_phi_step_pin_c5_qneg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacher_phi_step_pin_c5_qneg
+
+/-- info: 'SocrateAI.NumberTheory.rademacher_phi_step_pin_c7_aneg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacher_phi_step_pin_c7_aneg
+
+/-- info: 'SocrateAI.NumberTheory.rademacher_phi_step_pin_c12_r7' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacher_phi_step_pin_c12_r7
+
+/-- info: 'SocrateAI.NumberTheory.rademacher_phi_step_pin_c5_dbig' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacher_phi_step_pin_c5_dbig
+
+/-- info: 'SocrateAI.NumberTheory.rademacher_phi_step_pin_c13_r5' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacher_phi_step_pin_c13_r5
+
+/-- info: 'SocrateAI.NumberTheory.rademacher_phi_step_fails_det_ne_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacher_phi_step_fails_det_ne_one
+
+/-- info: 'SocrateAI.NumberTheory.rademacher_phi_step_fails_det_ne_one_2' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacher_phi_step_fails_det_ne_one_2
+
+/-- info: 'SocrateAI.NumberTheory.rademacher_phi_step_fails_hrd' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacher_phi_step_fails_hrd
+
+-- ---------------------------------------------------------------------------------------
+-- LL-22 STATEMENT PINS.  These fail the build if `Φ`, `Ψ` or `s(h,k)` is ever redefined as
+-- another of the three.  `rfl`/`decide +kernel` is the guard, not the source text.
+-- ---------------------------------------------------------------------------------------
+
+-- PIN 1 -- the definition of `s(h,k)` longhand, at the ported signature.
+example : ∀ (h : ℤ) (k : ℕ), SocrateAI.NumberTheory.dedekindSum h k
+    = ∑ r ∈ Finset.range k, SocrateAI.NumberTheory.dedekindSaw ((r : ℚ) / k)
+        * SocrateAI.NumberTheory.dedekindSaw ((h : ℚ) * r / k) :=
+  fun _ _ => rfl
+
+-- PIN 2 -- the sawtooth longhand: `0` ON the integers, `fract - 1/2` off them.  A version that
+-- dropped the `if` (i.e. `((x)) = fract x - 1/2` everywhere) would break this and would make
+-- `dedekindSum_neg` false.
+example : ∀ x : ℚ, SocrateAI.NumberTheory.dedekindSaw x
+    = if Int.fract x = 0 then 0 else Int.fract x - 1 / 2 :=
+  fun _ => rfl
+
+-- PIN 3 -- `Ψ = Φ - 3·sign(c(a+d))` longhand, so the OFFSET between the two cannot drift.
+example : ∀ γ : SL(2, ℤ), SocrateAI.NumberTheory.rademacherPsi γ
+    = SocrateAI.NumberTheory.rademacherPhi γ
+        - 3 * ((Int.sign (γ 1 0 * (γ 0 0 + γ 1 1)) : ℤ) : ℚ) :=
+  fun _ => rfl
+
+-- PIN 4 -- the three functions are pairwise DIFFERENT as numbers, on matrices where it shows.
+example : SocrateAI.NumberTheory.rademacherPhi ModularGroup.T = 1 := by decide +kernel
+example : SocrateAI.NumberTheory.dedekindSum 1 5 = 1 / 5 := by decide +kernel
+example : SocrateAI.NumberTheory.dedekindSum 1 5 ≠ 2 / 5 := by decide +kernel
+
+-- ---------------------------------------------------------------------------------------
+-- INVERTED TRIPWIRES.  Each of these asserts that a run-4 node is STILL UNPROVED.  When one is
+-- proved, its footprint loses `sorryAx` and the guard below FAILS -- which is the signal to
+-- edit this file and flip the DAG node.  This is the mechanism that stops run 4 from being
+-- cited as more finished than it is.
+-- ---------------------------------------------------------------------------------------
+
+-- DRK-02 HAS BEEN PROVED (2026-09-07) and its inverted tripwire is therefore GONE, replaced by
+-- the ordinary positive guard in the DRK-00/DRK-01 block above.  This comment is the receipt for
+-- the deletion: an inverted tripwire that vanishes without a positive guard taking its place
+-- would be indistinguishable from someone quietly deleting an inconvenient check.  The positive
+-- guard is `#print axioms SocrateAI.NumberTheory.dedekindSum_add_dedekindSum` giving
+-- [propext, Classical.choice, Quot.sound] -- no `sorryAx`, no `Lean.ofReduceBool`.
+-- The remaining inverted tripwires below are still OPEN nodes and must stay.
+
+-- DRK-03 HAS BEEN PROVED (2026-09-07).  Its three inverted tripwires -- which asserted that
+-- `rademacherPhi_of_pos`, `rademacherPhi_neg` and `rademacherPhi_T_zpow` still carried `sorryAx`
+-- -- are therefore GONE, replaced by the three ordinary positive guards in the DRK-03 block
+-- above, alongside eleven named pin guards.  This comment is the receipt for the deletion.
+-- The remaining inverted tripwires below are still OPEN nodes and must stay.
+
+-- DRK-04 HAS BEEN PROVED (2026-09-07).  Its inverted tripwire -- which asserted that
+-- `rademacher_phi_step` still carried `sorryAx` -- is therefore GONE, replaced by the ordinary
+-- positive guard in the DRK-04 block above, alongside fifteen named pin/negative-control guards.
+-- This comment is the receipt for the deletion.  NOTE WHAT THIS DOES **NOT** CLOSE: DRK-06
+-- (`eta_specialLinearGroup_smul_flt`, `eta_smul_eq_exp_rademacherPhi`), DRK-05
+-- (`logDeriv_eta_smul_eq_logDeriv_csqrt`, `exists_eta_smul_const`), DRK-07
+-- (`etaMultiplierPhi_pow24`, `etaMultiplierPhi_mul_cocycle`) and ETA-01 (`ligozat_general`) are
+-- all STILL OPEN and their inverted tripwires below are untouched.  DRK-04 is the arithmetic
+-- engine of DRK-06, not DRK-06.  (DRK-05 has since been proved -- see the block below -- but
+-- that is the ANALYTIC half only and still does not close DRK-06.)
+
+-- DRK-05 HAS BEEN PROVED (2026-09-08), BOTH HALVES.  The two inverted tripwires that stood here
+-- -- asserting that `logDeriv_eta_smul_eq_logDeriv_csqrt` and `exists_eta_smul_const` still
+-- carried `sorryAx` -- are therefore GONE, replaced by the two ordinary positive guards below
+-- plus TWENTY-FIVE named pin / negative-control guards.  This comment is the receipt for the
+-- deletion.
+--
+-- READ THIS BEFORE QUOTING IT (LL-1).  DRK-05 is the ANALYTIC HALF ONLY.  It says the ratio
+-- eta(gamma z) / (sqrt(-i(cz+d)) eta z) is a CONSTANT; it says NOTHING about the value of that
+-- constant.  It is STRICTLY WEAKER than FLT's `eta_specialLinearGroup_smul`: the reference gives
+-- the multiplier as exp(pi i/12 ((a+d)/c - 12 s(d,c))), and DRK-05(b) replaces that value by an
+-- unnamed existential.  The reference implies DRK-05(b) in one line; the converse is all of
+-- DRK-06.  WHAT DRK-05 DOES *NOT* DO: it does not close FLT item (3); it does not remove
+-- F3.2-OBSTRUCTED; it does not unblock ETA-01; and it does not touch the c = 0 or c < 0 branches
+-- (both statements carry `0 < gamma 1 0`, exactly as the reference does).
+--
+-- PROVENANCE: INDEPENDENT.  No FLT text was used, and FLT has no counterpart to DRK-05(a) at all.
+-- The proof is the E2-period route: `logDeriv_eta_eq_E2` on both z and gamma z,
+-- `EisensteinSeries.E2_slash_action gamma` for the weight-2 defect, and `Complex.deriv_sqrt` for
+-- the square-root side; the two sides meet at + c/(2(cz+d)), the sign coming from i^2 = -1
+-- acting on the SUBTRACTED defect.  Relative to Mathlib it is a strict generalisation of
+-- `ModularForm.logDeriv_eta_comp_eq_logDeriv_csqrt_eta` (which is the gamma = S case only).
+--
+-- The remaining inverted tripwires below (DRK-06, DRK-07, ETA-01) are still OPEN and must stay.
+
+
+/-- info: 'SocrateAI.ModularForms.logDeriv_eta_smul_eq_logDeriv_csqrt' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.logDeriv_eta_smul_eq_logDeriv_csqrt
+
+
+/-- info: 'SocrateAI.ModularForms.exists_eta_smul_const' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.exists_eta_smul_const
+
+
+-- The sign gate for DRK-05, guarded.  Family A pins Re(-i(cz+d)) = c*Im z -- the ONLY place
+-- `0 < gamma 1 0` enters the proof, since it is what puts -i(cz+d) in `Complex.slitPlane`.
+-- Family B pins the E2 defect constant against SEVEN independently computed rational values
+-- (mpmath at 50 dps, then exact `fractions.Fraction`; the two agree to the last digit).
+-- Two negative controls show both signs are load-bearing: c < 0 fails, and +i fails.
+-- LL-22: no Dedekind sum, no Phi and no Psi occurs anywhere in DRK-05, so the Phi/Psi confusion
+-- cannot enter this node; it enters at DRK-06, where the RademacherPhi.lean tripwires live.
+
+/-- info: 'SocrateAI.ModularForms.drk05_pin_slit_c3d2' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk05_pin_slit_c3d2
+
+
+/-- info: 'SocrateAI.ModularForms.drk05_pin_slit_c1d1' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk05_pin_slit_c1d1
+
+
+/-- info: 'SocrateAI.ModularForms.drk05_pin_slit_c4d3' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk05_pin_slit_c4d3
+
+
+/-- info: 'SocrateAI.ModularForms.drk05_pin_slit_c12d5' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk05_pin_slit_c12d5
+
+
+/-- info: 'SocrateAI.ModularForms.drk05_pin_slit_c5dm2' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk05_pin_slit_c5dm2
+
+
+/-- info: 'SocrateAI.ModularForms.drk05_pin_slit_c16d7' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk05_pin_slit_c16d7
+
+
+/-- info: 'SocrateAI.ModularForms.drk05_pin_slit_c2dm1' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk05_pin_slit_c2dm1
+
+
+/-- info: 'SocrateAI.ModularForms.drk05_pin_slit_c1d0' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk05_pin_slit_c1d0
+
+
+/-- info: 'SocrateAI.ModularForms.drk05_pin_slit_pos_c3d2' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk05_pin_slit_pos_c3d2
+
+
+/-- info: 'SocrateAI.ModularForms.drk05_pin_slit_pos_c1d1' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk05_pin_slit_pos_c1d1
+
+
+/-- info: 'SocrateAI.ModularForms.drk05_pin_slit_pos_c4d3' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk05_pin_slit_pos_c4d3
+
+
+/-- info: 'SocrateAI.ModularForms.drk05_pin_slit_pos_c12d5' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk05_pin_slit_pos_c12d5
+
+
+/-- info: 'SocrateAI.ModularForms.drk05_pin_slit_pos_c5dm2' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk05_pin_slit_pos_c5dm2
+
+
+/-- info: 'SocrateAI.ModularForms.drk05_pin_slit_pos_c16d7' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk05_pin_slit_pos_c16d7
+
+
+/-- info: 'SocrateAI.ModularForms.drk05_pin_slit_pos_c2dm1' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk05_pin_slit_pos_c2dm1
+
+
+/-- info: 'SocrateAI.ModularForms.drk05_pin_slit_pos_c1d0' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk05_pin_slit_pos_c1d0
+
+
+/-- info: 'SocrateAI.ModularForms.drk05_neg_control_slit_cneg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk05_neg_control_slit_cneg
+
+
+/-- info: 'SocrateAI.ModularForms.drk05_neg_control_plus_I' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk05_neg_control_plus_I
+
+
+/-- info: 'SocrateAI.ModularForms.drk05_pin_defect_c3' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk05_pin_defect_c3
+
+
+/-- info: 'SocrateAI.ModularForms.drk05_pin_defect_c1' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk05_pin_defect_c1
+
+
+/-- info: 'SocrateAI.ModularForms.drk05_pin_defect_c12' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk05_pin_defect_c12
+
+
+/-- info: 'SocrateAI.ModularForms.drk05_pin_defect_c5' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk05_pin_defect_c5
+
+
+/-- info: 'SocrateAI.ModularForms.drk05_pin_defect_c4' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk05_pin_defect_c4
+
+
+/-- info: 'SocrateAI.ModularForms.drk05_pin_defect_c16' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk05_pin_defect_c16
+
+
+/-- info: 'SocrateAI.ModularForms.drk05_pin_defect_c2' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk05_pin_defect_c2
+
+
+-- ---------------------------------------------------------------------------------------------
+-- DRK-06 PROVED (2026-09-08).  The inverted tripwires for `eta_specialLinearGroup_smul_flt` and
+-- `eta_smul_eq_exp_rademacherPhi` (which asserted `sorryAx` while the node was open) are DELETED
+-- and replaced by the positive guards below.  This comment is the receipt for that deletion.
+--
+-- WHAT DRK-06 IS: the closed form of the eta multiplier for gamma in SL(2,Z) with c > 0,
+--   eta(gamma z) = exp(pi i Phi(gamma) / 12) * sqrt(-i (c z + d)) * eta(z),
+-- with Phi = rademacherPhi = APOSTOL'S Phi, NOT the Rademacher symbol Psi (LL-22).
+-- Statement from anthropics/fermats-last-theorem (Apache-2.0), PROOF INDEPENDENT: strong
+-- induction on c by Euclidean descent, base c = 1 via gamma = T^a S T^d, step via
+-- gamma = gamma' S T^q with gamma' 1 0 = r < c, DRK-04 (`rademacher_phi_step`) supplying
+-- Phi(gamma) = Phi(gamma') + q - 3 and `csqrt_mul_of_re_mul_pos` supplying the matching branch
+-- factor sqrt(-i) = exp(-pi i/4) = exp(pi i (-3)/12).  DRK-05 is NOT used.
+--
+-- WHAT DRK-06 DOES *NOT* DO: it says nothing about c = 0 or c < 0 (that is FLT's own scope too),
+-- it does not prove DRK-07, and it does not close ETA-01 / F3.2-OBSTRUCTED.  The inverted
+-- tripwires for DRK-07 and ETA-01 below are still OPEN and must stay.
+--
+-- The sixteen pins and three negative controls are guarded too: they are the sign gate, and a
+-- guard on the theorem without a guard on its gate is worth less than either.
+-- ---------------------------------------------------------------------------------------------
+
+/-- info: 'SocrateAI.ModularForms.eta_smul_eq_exp_rademacherPhi' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta_smul_eq_exp_rademacherPhi
+
+/-- info: 'SocrateAI.ModularForms.eta_specialLinearGroup_smul_flt' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta_specialLinearGroup_smul_flt
+
+/-- info: 'SocrateAI.ModularForms.eta_smul_strong_induction' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta_smul_strong_induction
+
+/-- info: 'SocrateAI.ModularForms.eta_smul_of_c_eq_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta_smul_of_c_eq_one
+
+/-- info: 'SocrateAI.ModularForms.eta_smul_descent_step' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta_smul_descent_step
+
+/-- info: 'SocrateAI.ModularForms.rademacherPhi_descent' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.rademacherPhi_descent
+
+/-- info: 'SocrateAI.ModularForms.sl2_descent_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sl2_descent_eq
+
+/-- info: 'SocrateAI.ModularForms.sl2_det' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sl2_det
+
+/-- info: 'SocrateAI.ModularForms.slOf_apply' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.slOf_apply
+
+/-- info: 'SocrateAI.ModularForms.csqrt_mul_self' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.csqrt_mul_self
+
+/-- info: 'SocrateAI.ModularForms.csqrt_re_nonneg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.csqrt_re_nonneg
+
+/-- info: 'SocrateAI.ModularForms.csqrt_re_mul_re_sub' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.csqrt_re_mul_re_sub
+
+/-- info: 'SocrateAI.ModularForms.csqrt_two_re_mul_im' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.csqrt_two_re_mul_im
+
+/-- info: 'SocrateAI.ModularForms.abs_im_csqrt_lt_re' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.abs_im_csqrt_lt_re
+
+/-- info: 'SocrateAI.ModularForms.csqrt_re_pos_im_pos' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.csqrt_re_pos_im_pos
+
+/-- info: 'SocrateAI.ModularForms.csqrt_mul_of_re_mul_pos' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.csqrt_mul_of_re_mul_pos
+
+/-- info: 'SocrateAI.ModularForms.csqrt_mul_of_re_pos' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.csqrt_mul_of_re_pos
+
+/-- info: 'SocrateAI.ModularForms.csqrt_neg_I_mul' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.csqrt_neg_I_mul
+
+/-- info: 'SocrateAI.ModularForms.csqrt_neg_I_eq_exp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.csqrt_neg_I_eq_exp
+
+/-- info: 'SocrateAI.ModularForms.csqrt_I_inv' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.csqrt_I_inv
+
+/-- info: 'SocrateAI.ModularForms.coe_T_zpow_smul' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.coe_T_zpow_smul
+
+/-- info: 'SocrateAI.ModularForms.coe_S_smul' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.coe_S_smul
+
+/-- info: 'SocrateAI.ModularForms.im_pos_coe' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.im_pos_coe
+
+/-- info: 'SocrateAI.ModularForms.eta_neg_inv' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta_neg_inv
+
+/-- info: 'SocrateAI.ModularForms.re_neg_I_mul_lin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.re_neg_I_mul_lin
+
+/-- info: 'SocrateAI.ModularForms.coe_T_zpow_entry' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.coe_T_zpow_entry
+
+/-- info: 'SocrateAI.ModularForms.drk06_pin_descent_c5' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk06_pin_descent_c5
+
+/-- info: 'SocrateAI.ModularForms.drk06_pin_descent_c7' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk06_pin_descent_c7
+
+/-- info: 'SocrateAI.ModularForms.drk06_pin_descent_c2' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk06_pin_descent_c2
+
+/-- info: 'SocrateAI.ModularForms.drk06_pin_descent_c4' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk06_pin_descent_c4
+
+/-- info: 'SocrateAI.ModularForms.drk06_pin_descent_c5b' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk06_pin_descent_c5b
+
+/-- info: 'SocrateAI.ModularForms.drk06_pin_descent_c3' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk06_pin_descent_c3
+
+/-- info: 'SocrateAI.ModularForms.drk06_pin_descent_c12' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk06_pin_descent_c12
+
+/-- info: 'SocrateAI.ModularForms.drk06_pin_descent_c13' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk06_pin_descent_c13
+
+/-- info: 'SocrateAI.ModularForms.drk06_neg_control_minus_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk06_neg_control_minus_two
+
+/-- info: 'SocrateAI.ModularForms.drk06_neg_control_no_shift' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk06_neg_control_no_shift
+
+/-- info: 'SocrateAI.ModularForms.drk06_pin_base_S' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk06_pin_base_S
+
+/-- info: 'SocrateAI.ModularForms.drk06_pin_base_T' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk06_pin_base_T
+
+/-- info: 'SocrateAI.ModularForms.drk06_pin_base_23' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk06_pin_base_23
+
+/-- info: 'SocrateAI.ModularForms.drk06_pin_base_m14' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk06_pin_base_m14
+
+/-- info: 'SocrateAI.ModularForms.drk06_pin_base_5m2' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk06_pin_base_5m2
+
+/-- info: 'SocrateAI.ModularForms.drk06_pin_base_m4m7' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk06_pin_base_m4m7
+
+/-- info: 'SocrateAI.ModularForms.drk06_pin_branch_im_neg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk06_pin_branch_im_neg
+
+/-- info: 'SocrateAI.ModularForms.drk06_pin_branch_im_pos' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk06_pin_branch_im_pos
+
+/-- info: 'SocrateAI.ModularForms.drk06_neg_control_branch_sign' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk06_neg_control_branch_sign
+
+/-- info: 'SocrateAI.NumberTheory.rademacherPhi_of_pos_toNat' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.rademacherPhi_of_pos_toNat
+
+
+/-- info: 'SocrateAI.ModularForms.etaMultiplierPhi_pow24' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaMultiplierPhi_pow24
+
+/-- info: 'SocrateAI.ModularForms.etaMultiplierPhi_mul_cocycle' depends on axioms: [propext,
+ sorryAx,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaMultiplierPhi_mul_cocycle
+
+-- `ligozat_trivial_multiplier_of_twelve_dvd`'s guard moved with it to
+-- `Lean/SocrateAI/Quarantine/LigozatTrivialMultiplierRefuted.lean` (not part of this default
+-- build target; see that file and ATTRIBUTION.md \S3).
+
+-- The multiplier DEFINITION is sorry-free even though every theorem about it is not.
+/-- info: 'SocrateAI.ModularForms.etaMultiplierPhi' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaMultiplierPhi
+
+/-- info: 'SocrateAI.ModularForms.mobiusC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.mobiusC
+
+
+/-! ## DRK-08 — `w(-γ) = (-1)^k·w(γ)` and the `c`-sign reduction  (LL-2 / LL-7)
+
+Both resolving declarations are `SocrateAI.ModularForms.etaMultiplierVal_neg` and
+`SocrateAI.ModularForms.exists_pos_lower_left_or_T_zpow`, in
+`Lean/SocrateAI/ModularForms/EtaMultiplierNeg.lean`.  PROVENANCE: INDEPENDENT — no FLT counterpart
+exists (comparator verdict NO_REFERENCE), and no `ATTRIBUTION.md` port entry is owed.
+
+The three anti-junk-witness controls are guarded here as theorems in their own right:
+`drk08_neg_control_cneg4_not_T_zpow` (at `c = -4` the `T^n` disjunct is FALSE, so part 2 must have
+produced `γ' = -γ` with `c' = 4 > 0`), `drk08_neg_control_T5_not_pos_lower_left` (at `c = 0` the
+`0 < c'` disjunct is FALSE), and `drk08_neg_control_neg_S_ne_S` (at ODD `k = 1`, `f = η²`,
+`w(-S) = i ≠ -i = w(S)`, so part 1's `(-1)^k` is load-bearing and not a decoration).
+
+SCOPE (LL-1): DRK-08 is at the eta-QUOTIENT multiplier level.  It does NOT extend DRK-06 to
+`c ≤ 0` — the single-`η` closed form is false there by a factor of `i`.  See the file header. -/
+
+/-- info: 'SocrateAI.ModularForms.drk08Mat' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk08Mat
+
+/-- info: 'SocrateAI.ModularForms.drk08Mat_coe' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk08Mat_coe
+
+/-- info: 'SocrateAI.ModularForms.SL2_neg_entry' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.SL2_neg_entry
+
+/-- info: 'SocrateAI.ModularForms.drk08MatCneg4' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk08MatCneg4
+
+/-- info: 'SocrateAI.ModularForms.drk08MatC5' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk08MatC5
+
+/-- info: 'SocrateAI.ModularForms.drk08MatT5' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk08MatT5
+
+/-- info: 'SocrateAI.ModularForms.drk08MatNegT3' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk08MatNegT3
+
+/-- info: 'SocrateAI.ModularForms.drk08_pin_cneg4_entry' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk08_pin_cneg4_entry
+
+/-- info: 'SocrateAI.ModularForms.drk08_pin_cneg4_neg_entry' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk08_pin_cneg4_neg_entry
+
+/-- info: 'SocrateAI.ModularForms.drk08_pin_cneg4_mem' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk08_pin_cneg4_mem
+
+/-- info: 'SocrateAI.ModularForms.drk08_pin_c5_entry' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk08_pin_c5_entry
+
+/-- info: 'SocrateAI.ModularForms.drk08_pin_T5_entries' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk08_pin_T5_entries
+
+/-- info: 'SocrateAI.ModularForms.drk08_pin_T5_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk08_pin_T5_eq
+
+/-- info: 'SocrateAI.ModularForms.drk08_pin_negT3_entries' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk08_pin_negT3_entries
+
+/-- info: 'SocrateAI.ModularForms.drk08_pin_negT3_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk08_pin_negT3_eq
+
+/-- info: 'SocrateAI.ModularForms.drk08_neg_control_negT3_wrong_sign' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk08_neg_control_negT3_wrong_sign
+
+/-- info: 'SocrateAI.ModularForms.drk08_pin_neg_one_zpow_odd' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk08_pin_neg_one_zpow_odd
+
+/-- info: 'SocrateAI.ModularForms.drk08_neg_control_even_k_blind' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk08_neg_control_even_k_blind
+
+/-- info: 'SocrateAI.ModularForms.drk08_pin_neg_one_zpow_neg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk08_pin_neg_one_zpow_neg
+
+/-- info: 'SocrateAI.ModularForms.drk08_pin_eta_sq_weight' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk08_pin_eta_sq_weight
+
+/-- info: 'SocrateAI.ModularForms.T_zpow_lower_left' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.T_zpow_lower_left
+
+/-- info: 'SocrateAI.ModularForms.neg_T_zpow_lower_left' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.neg_T_zpow_lower_left
+
+/-- info: 'SocrateAI.ModularForms.exists_pos_lower_left_or_T_zpow' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.exists_pos_lower_left_or_T_zpow
+
+/-- info: 'SocrateAI.ModularForms.drk08_neg_control_cneg4_not_T_zpow' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk08_neg_control_cneg4_not_T_zpow
+
+/-- info: 'SocrateAI.ModularForms.drk08_neg_control_T5_not_pos_lower_left' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk08_neg_control_T5_not_pos_lower_left
+
+/-- info: 'SocrateAI.ModularForms.etaMultiplierVal_neg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaMultiplierVal_neg
+
+/-- info: 'SocrateAI.ModularForms.etaMultiplierVal_neg_eta_sq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaMultiplierVal_neg_eta_sq
+
+/-- info: 'SocrateAI.ModularForms.etaMultiplierVal_eta_sq_neg_S' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaMultiplierVal_eta_sq_neg_S
+
+/-- info: 'SocrateAI.ModularForms.drk08_neg_control_neg_S_ne_S' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk08_neg_control_neg_S_ne_S
+
+
+/-! ## DRK-09 — the eta-quotient multiplier as one Dedekind-sum exponential  (LL-2 / LL-7)
+
+The resolving declaration for the DAG node is
+`SocrateAI.ModularForms.etaMultiplierVal_eq_exp_etaPhiSum`, in
+`Lean/SocrateAI/ModularForms/EtaPhiSum.lean`.  All three statements the node was scoped in are
+landed and `sorry`-free: the definition `etaPhiSum`, the split form `etaPhiSum_eq`, and the
+closed form `etaMultiplierVal_eq_exp_etaPhiSum`.
+
+PROVENANCE: **INDEPENDENT re-derivation**, from DRK-06 + run 3's `divisorConj` (F3.2-A3) +
+`csqrt_zpow_two_mul` (F3.2-A7).  No FLT text, tactic or proof strategy is used and no FLT
+solution file was read, so **no `ATTRIBUTION.md` port entry is owed for the proofs**.  But the
+node's own metadata claim "No FLT counterpart" is **FALSE** and is retracted in
+`ATTRIBUTION.md` §DRK-09: `P2M/Sol/S_ModularCurve_sharpUnitInvariant.lean`'s
+`DedekindEtaLaw.phi` is our summand at prime level with two divisors, and
+`ModularForm.etaProductEleven_transform` is an `N = 11` instance.  DRK-09 is a genuine
+generalisation (arbitrary `N`, arbitrary `r`, arbitrary integer weight `k`) and the
+`(√x)^{2k} = (-i)^k(cz+d)^k` collection has no upstream counterpart, since FLT works at weight 0.
+
+WHAT DRK-09 DOES *NOT* DO (LL-1).  It does **not** delete `F3.2-OBSTRUCTED`; the node's own
+docstring said "deletes" and that word is wrong.  It REPLACES the `hgen` generation hypothesis of
+`multiplier_trivial_of_congr` with an explicit Dedekind-sum evaluation.  Still open:
+(a) `c ≤ 0` — and `etaMultiplierVal_c_zero_formula_fails`, guarded below, PROVES the formula is
+false at `c = 0` (`N = 1`, `r ≡ 2`, `k = 1`, `γ = T`: truth `e^{πi/6}`, formula `-i`), so this is
+a real gap and not bookkeeping; (b) the arithmetic `24 ∣ etaPhiSum N r γ` from Ligozat's two
+congruences, which is a separate and harder node.  `ETA-01` therefore remains OPEN.
+
+THE ANTI-JUNK GATE.  Fifteen `decide +kernel` pins of `etaPhiSum` at explicit `(N, r, γ)`
+(`N ∈ {2,4,5,6,7,9,11,12,13}`, values `0, ±24, 11, 28, -18, 12, 18, 5, -3, 6, -8`, including odd
+values and values not divisible by 24), each computed independently in Python first and eleven of
+them checked against a 4000-term `η`-product evaluation of the multiplier (worst relative error
+3.3e-14).  Four kernel negative controls separate `etaPhiSum` from the three one-character
+mutants the numerical sweep rejects: `+12·s` instead of `−12·s`, `(a+d)/c` instead of
+`(a+d)·δ/c`, and `s(d,c)` instead of `s(d,c/δ)`.
+
+BONUS, and an independent consistency check on the whole formula: comparing DRK-09 at
+`(N,r,k) = (1, 24, 12)` with run 3's `etaMultiplierVal_level_one_24` (the multiplier of `Δ` is 1,
+proved with no Dedekind sums at all) forces `e^{2πiΦ(γ)} = 1`, i.e. **`Φ(γ) ∈ ℤ`**
+(`rademacherPhi_eq_intCast`).  That was the explicitly-named missing ingredient of `DRK-07.a`,
+and `etaMultiplierPhi_pow24_of_intCast` discharges DRK-07.a's statement under a new name.  The
+`sorry` at `EtaMultiplier.lean:1234` is deliberately NOT touched by this run, so the inverted
+tripwire above still fires: it is now **stale**, not wrong. -/
+
+/-- info: 'SocrateAI.ModularForms.etaPhiSum' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaPhiSum
+
+/-- info: 'SocrateAI.ModularForms.drk09MatC4' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09MatC4
+
+/-- info: 'SocrateAI.ModularForms.drk09MatC8' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09MatC8
+
+/-- info: 'SocrateAI.ModularForms.drk09MatC2' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09MatC2
+
+/-- info: 'SocrateAI.ModularForms.drk09MatC6' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09MatC6
+
+/-- info: 'SocrateAI.ModularForms.drk09MatC6b' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09MatC6b
+
+/-- info: 'SocrateAI.ModularForms.drk09MatC12' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09MatC12
+
+/-- info: 'SocrateAI.ModularForms.drk09MatC5' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09MatC5
+
+/-- info: 'SocrateAI.ModularForms.drk09MatC13' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09MatC13
+
+/-- info: 'SocrateAI.ModularForms.drk09MatC7' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09MatC7
+
+/-- info: 'SocrateAI.ModularForms.drk09MatC11' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09MatC11
+
+/-- info: 'SocrateAI.ModularForms.drk09MatC9' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09MatC9
+
+/-- info: 'SocrateAI.ModularForms.drk09R4' does not depend on any axioms -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09R4
+
+/-- info: 'SocrateAI.ModularForms.drk09R2' does not depend on any axioms -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09R2
+
+/-- info: 'SocrateAI.ModularForms.drk09R6' does not depend on any axioms -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09R6
+
+/-- info: 'SocrateAI.ModularForms.drk09R12' does not depend on any axioms -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09R12
+
+/-- info: 'SocrateAI.ModularForms.drk09R5' does not depend on any axioms -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09R5
+
+/-- info: 'SocrateAI.ModularForms.drk09R13' does not depend on any axioms -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09R13
+
+/-- info: 'SocrateAI.ModularForms.drk09R7' does not depend on any axioms -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09R7
+
+/-- info: 'SocrateAI.ModularForms.drk09R11' does not depend on any axioms -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09R11
+
+/-- info: 'SocrateAI.ModularForms.drk09R9' does not depend on any axioms -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09R9
+
+/-- info: 'SocrateAI.ModularForms.drk09R6a' does not depend on any axioms -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09R6a
+
+/-- info: 'SocrateAI.ModularForms.drk09R12b' does not depend on any axioms -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09R12b
+
+/-- info: 'SocrateAI.ModularForms.drk09R5b' does not depend on any axioms -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09R5b
+
+/-- info: 'SocrateAI.ModularForms.drk09R9b' does not depend on any axioms -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09R9b
+
+/-- info: 'SocrateAI.ModularForms.drk09_pin_N4_c4' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09_pin_N4_c4
+
+/-- info: 'SocrateAI.ModularForms.drk09_pin_N4_c8' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09_pin_N4_c8
+
+/-- info: 'SocrateAI.ModularForms.drk09_pin_N2' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09_pin_N2
+
+/-- info: 'SocrateAI.ModularForms.drk09_pin_N6_c6' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09_pin_N6_c6
+
+/-- info: 'SocrateAI.ModularForms.drk09_pin_N6_c6b' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09_pin_N6_c6b
+
+/-- info: 'SocrateAI.ModularForms.drk09_pin_N12' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09_pin_N12
+
+/-- info: 'SocrateAI.ModularForms.drk09_pin_N5' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09_pin_N5
+
+/-- info: 'SocrateAI.ModularForms.drk09_pin_N13' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09_pin_N13
+
+/-- info: 'SocrateAI.ModularForms.drk09_pin_N7' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09_pin_N7
+
+/-- info: 'SocrateAI.ModularForms.drk09_pin_N11' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09_pin_N11
+
+/-- info: 'SocrateAI.ModularForms.drk09_pin_N9' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09_pin_N9
+
+/-- info: 'SocrateAI.ModularForms.drk09_pin_N6_single' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09_pin_N6_single
+
+/-- info: 'SocrateAI.ModularForms.drk09_pin_N12_sparse' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09_pin_N12_sparse
+
+/-- info: 'SocrateAI.ModularForms.drk09_pin_N5_sparse' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09_pin_N5_sparse
+
+/-- info: 'SocrateAI.ModularForms.drk09_pin_N9_sparse' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09_pin_N9_sparse
+
+/-- info: 'SocrateAI.ModularForms.etaPhiSumSignFlip' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaPhiSumSignFlip
+
+/-- info: 'SocrateAI.ModularForms.etaPhiSumNoDelta' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaPhiSumNoDelta
+
+/-- info: 'SocrateAI.ModularForms.etaPhiSumWrongModulus' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaPhiSumWrongModulus
+
+/-- info: 'SocrateAI.ModularForms.drk09_neg_control_sign_flip' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09_neg_control_sign_flip
+
+/-- info: 'SocrateAI.ModularForms.drk09_neg_control_no_delta' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09_neg_control_no_delta
+
+/-- info: 'SocrateAI.ModularForms.drk09_neg_control_wrong_modulus' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09_neg_control_wrong_modulus
+
+/-- info: 'SocrateAI.ModularForms.drk09_neg_control_mutants_at_N7' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk09_neg_control_mutants_at_N7
+
+/-- info: 'SocrateAI.ModularForms.etaPhiSum_eq_unconditional' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaPhiSum_eq_unconditional
+
+/-- info: 'SocrateAI.ModularForms.etaPhiSum_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaPhiSum_eq
+
+/-- info: 'SocrateAI.ModularForms.rademacherPhi_divisorConj' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.rademacherPhi_divisorConj
+
+/-- info: 'SocrateAI.ModularForms.eta_natScale_smul_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta_natScale_smul_eq
+
+/-- info: 'SocrateAI.ModularForms.etaQuotientH_smul_eq_exp_etaPhiSum' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaQuotientH_smul_eq_exp_etaPhiSum
+
+/-- info: 'SocrateAI.ModularForms.etaMultiplierVal_eq_exp_etaPhiSum' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaMultiplierVal_eq_exp_etaPhiSum
+
+/-- info: 'SocrateAI.ModularForms.etaPhiSum_of_lower_left_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaPhiSum_of_lower_left_zero
+
+/-- info: 'SocrateAI.ModularForms.etaMultiplierVal_c_zero_formula_fails' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaMultiplierVal_c_zero_formula_fails
+
+/-- info: 'SocrateAI.ModularForms.rademacherPhi_eq_intCast_of_pos' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.rademacherPhi_eq_intCast_of_pos
+
+/-- info: 'SocrateAI.ModularForms.rademacherPhi_eq_intCast' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.rademacherPhi_eq_intCast
+
+/-- info: 'SocrateAI.ModularForms.etaMultiplierPhi_pow24_of_intCast' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaMultiplierPhi_pow24_of_intCast
+
+
+
+/-! ## DRK-10 — the Dedekind sum mod 8 and the Kronecker/Jacobi bridge
+
+28 guards.  Every one of them is `[propext, Classical.choice, Quot.sound]` — no `sorryAx`, no
+new axiom.  The block covers, in order: the twelve `decide +kernel` instance pins of the
+`DRK-10` statement, its four negative controls (two for `Odd k`, two for `Nat.Coprime h k`),
+the two headline theorems and the integrality lemma they run on, the consistency tripwire that
+re-derives the `(7,11)` witness `t = -4` **from the general theorem**, and half 2's four
+agreement pins and two `2`-disagreement controls. -/
+
+section Drk10
+
+/-- info: 'SocrateAI.NumberTheory.drk10_pin_one_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.drk10_pin_one_one
+
+/-- info: 'SocrateAI.NumberTheory.drk10_pin_zero_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.drk10_pin_zero_one
+
+/-- info: 'SocrateAI.NumberTheory.drk10_pin_one_five' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.drk10_pin_one_five
+
+/-- info: 'SocrateAI.NumberTheory.drk10_pin_two_five' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.drk10_pin_two_five
+
+/-- info: 'SocrateAI.NumberTheory.drk10_pin_three_seven' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.drk10_pin_three_seven
+
+/-- info: 'SocrateAI.NumberTheory.drk10_pin_five_seven' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.drk10_pin_five_seven
+
+/-- info: 'SocrateAI.NumberTheory.drk10_pin_seven_eleven' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.drk10_pin_seven_eleven
+
+/-- info: 'SocrateAI.NumberTheory.drk10_pin_nine_twentyfive' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.drk10_pin_nine_twentyfive
+
+/-- info: 'SocrateAI.NumberTheory.drk10_pin_eleven_thirteen' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.drk10_pin_eleven_thirteen
+
+/-- info: 'SocrateAI.NumberTheory.drk10_pin_two_fifteen' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.drk10_pin_two_fifteen
+
+/-- info: 'SocrateAI.NumberTheory.drk10_pin_four_nine' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.drk10_pin_four_nine
+
+/-- info: 'SocrateAI.NumberTheory.drk10_pin_thirteen_five' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.drk10_pin_thirteen_five
+
+/-- info: 'SocrateAI.NumberTheory.drk10_fails_k_even_one_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.drk10_fails_k_even_one_two
+
+/-- info: 'SocrateAI.NumberTheory.drk10_fails_k_even_five_six' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.drk10_fails_k_even_five_six
+
+/-- info: 'SocrateAI.NumberTheory.drk10_fails_gcd_three_nine' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.drk10_fails_gcd_three_nine
+
+/-- info: 'SocrateAI.NumberTheory.drk10_fails_gcd_five_fifteen' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.drk10_fails_gcd_five_fifteen
+
+/-- info: 'SocrateAI.NumberTheory.dedekindSum_jacobiSym_mod_eight' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.dedekindSum_jacobiSym_mod_eight
+
+/-- info: 'SocrateAI.ModularForms.kronecker_ne_jacobi_at_two_neg_three' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.kronecker_ne_jacobi_at_two_neg_three
+
+/-- info: 'SocrateAI.ModularForms.kronecker_ne_jacobi_at_two_five' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.kronecker_ne_jacobi_at_two_five
+
+/-- info: 'SocrateAI.ModularForms.kronecker_eq_jacobi_pin_three_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.kronecker_eq_jacobi_pin_three_one
+
+/-- info: 'SocrateAI.ModularForms.kronecker_eq_jacobi_pin_five_three' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.kronecker_eq_jacobi_pin_five_three
+
+/-- info: 'SocrateAI.ModularForms.kronecker_eq_jacobi_pin_two_five' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.kronecker_eq_jacobi_pin_two_five
+
+/-- info: 'SocrateAI.ModularForms.kroneckerSym_eq_jacobiSym_of_odd'' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.kroneckerSym_eq_jacobiSym_of_odd'
+
+/-- info: 'SocrateAI.ModularForms.kroneckerSym_eq_jacobiSym_of_odd' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.kroneckerSym_eq_jacobiSym_of_odd
+
+/-- info: 'SocrateAI.ModularForms.pos_of_odd_nat' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.pos_of_odd_nat
+
+/-- info: 'SocrateAI.NumberTheory.exists_intCast_eq_twelve_mul_dedekindSum' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.exists_intCast_eq_twelve_mul_dedekindSum
+
+/-- info: 'SocrateAI.NumberTheory.drk10_general_matches_pin_seven_eleven' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.NumberTheory.drk10_general_matches_pin_seven_eleven
+
+/-- info: 'SocrateAI.ModularForms.kronecker_eq_jacobi_pin_neg_one_seven' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.kronecker_eq_jacobi_pin_neg_one_seven
+
+end Drk10
+
+
+section Drk11
+
+-- DRK-11 (run 4) -- the closed-form eta multiplier vs Ligozat's Kronecker character.
+--
+-- WHAT THESE GUARDS CERTIFY, and equally what they do NOT.
+--
+-- PROVED, footprint [propext, Classical.choice, Quot.sound] in every case below:
+--   * the exponential layer, which REDUCES the node to a congruence mod 24 (`drk11_iff_congr`);
+--   * the node's exact conclusion for `0 < N <= 4` on all of `Gamma0 N` with `c > 0`
+--     (`exp_etaPhiSum_eq_kroneckerSym_of_le_four`), obtained by composing DRK-09 with run 3's
+--     F3.2-B3 -- no new mathematics, but the node's proposition on a nonempty domain;
+--   * eleven `decide +kernel` pins of the node's conclusion at explicit `(N, r, k, gamma)`,
+--     covering k even/odd/zero/NEGATIVE, c odd and even, d = 0 / positive odd / positive even /
+--     negative odd / negative even, negative exponents, and both symbol values;
+--   * four negative controls: Ligozat's two congruences are load-bearing (levels 8 and 12),
+--     `hc : 0 < c` is load-bearing (`gamma = T`, where the formula gives `i` and the truth is
+--     `1`), and the `(-1)^k` factor of `ligozatKroneckerNum` is load-bearing;
+--   * two consistency tripwires running the general (N <= 4) theorem at the gate's own
+--     instances and reproducing the values computed OUTSIDE Lean.
+--
+-- NOT PROVED, and the INVERTED tripwire at the end of this section certifies it: the node for
+-- general `N` (`exp_etaPhiSum_eq_kroneckerSym`) still depends on `sorryAx`.  `F3.2-OBSTRUCTED`
+-- stands; `ETA-01` is NOT resolved.  The two missing inputs are named in the `-- OPEN:` comment
+-- of the theorem: an EVEN-modulus companion to DRK-10, and the divisor-by-divisor quadratic
+-- reciprocity assembly.
+
+/-- info: 'SocrateAI.ModularForms.neg_I_eq_exp_pi_div_twelve' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.neg_I_eq_exp_pi_div_twelve
+
+/-- info: 'SocrateAI.ModularForms.neg_I_zpow_eq_exp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.neg_I_zpow_eq_exp
+
+/-- info: 'SocrateAI.ModularForms.drk11_lhs_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk11_lhs_eq
+
+/-- info: 'SocrateAI.ModularForms.exp_pi_div_twelve_eq_one_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.exp_pi_div_twelve_eq_one_iff
+
+/-- info: 'SocrateAI.ModularForms.exp_pi_div_twelve_eq_neg_one_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.exp_pi_div_twelve_eq_neg_one_iff
+
+/-- info: 'SocrateAI.ModularForms.drk11_eq_one_of' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk11_eq_one_of
+
+/-- info: 'SocrateAI.ModularForms.drk11_eq_neg_one_of' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk11_eq_neg_one_of
+
+/-- info: 'SocrateAI.ModularForms.drk11_ne_one_of' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk11_ne_one_of
+
+/-- info: 'SocrateAI.ModularForms.drk11_iff_congr' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk11_iff_congr
+
+/-- info: 'SocrateAI.ModularForms.kroneckerSym_one_right' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.kroneckerSym_one_right
+
+/-- info: 'SocrateAI.ModularForms.kroneckerSym_neg_one_right_of_neg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.kroneckerSym_neg_one_right_of_neg
+
+/-- info: 'SocrateAI.ModularForms.kroneckerSym_neg_one_right_of_pos' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.kroneckerSym_neg_one_right_of_pos
+
+/-- info: 'SocrateAI.ModularForms.kroneckerSym_neg_three_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.kroneckerSym_neg_three_two
+
+/-- info: 'SocrateAI.ModularForms.kroneckerSym_neg_three_neg_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.kroneckerSym_neg_three_neg_two
+
+/-- info: 'SocrateAI.ModularForms.drk11_pin_N1_S' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk11_pin_N1_S
+
+/-- info: 'SocrateAI.ModularForms.drk11_pin_N11_even_d' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk11_pin_N11_even_d
+
+/-- info: 'SocrateAI.ModularForms.drk11_pin_N3_odd_k' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk11_pin_N3_odd_k
+
+/-- info: 'SocrateAI.ModularForms.drk11_pin_N3_even_d' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk11_pin_N3_even_d
+
+/-- info: 'SocrateAI.ModularForms.drk11_pin_N3_neg_even_d' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk11_pin_N3_neg_even_d
+
+/-- info: 'SocrateAI.ModularForms.drk11_pin_N3_neg_odd_d' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk11_pin_N3_neg_odd_d
+
+/-- info: 'SocrateAI.ModularForms.drk11_pin_N3_neg_k' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk11_pin_N3_neg_k
+
+/-- info: 'SocrateAI.ModularForms.drk11_pin_N7_odd_c' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk11_pin_N7_odd_c
+
+/-- info: 'SocrateAI.ModularForms.drk11_pin_N2_even_c' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk11_pin_N2_even_c
+
+/-- info: 'SocrateAI.ModularForms.drk11_pin_N4_neg_exp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk11_pin_N4_neg_exp
+
+/-- info: 'SocrateAI.ModularForms.drk11_pin_N5_k_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk11_pin_N5_k_zero
+
+/-- info: 'SocrateAI.ModularForms.drk11_neg_control_congr_needed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk11_neg_control_congr_needed
+
+/-- info: 'SocrateAI.ModularForms.drk11_neg_control_congr_needed_twelve' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk11_neg_control_congr_needed_twelve
+
+/-- info: 'SocrateAI.ModularForms.drk11_neg_control_c_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk11_neg_control_c_zero
+
+/-- info: 'SocrateAI.ModularForms.drk11_neg_control_drop_sign' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk11_neg_control_drop_sign
+
+/-- info: 'SocrateAI.ModularForms.exp_etaPhiSum_eq_kroneckerSym_of_le_four' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.exp_etaPhiSum_eq_kroneckerSym_of_le_four
+
+/-- info: 'SocrateAI.ModularForms.drk11_general_matches_pin_N3_odd_k' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk11_general_matches_pin_N3_odd_k
+
+/-- info: 'SocrateAI.ModularForms.drk11_general_matches_pin_N3_even_d' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk11_general_matches_pin_N3_even_d
+
+-- INVERTED TRIPWIRE.  This guard PASSES only while DRK-11 for general `N` is UNPROVED.  When
+-- someone discharges the `sorry`, THIS CHECK FAILS and must be edited to the standard footprint
+-- in the same commit -- which is the point: the claim "DRK-11 is open" cannot go stale.
+/-- info: 'SocrateAI.ModularForms.exp_etaPhiSum_eq_kroneckerSym' depends on axioms: [propext,
+ sorryAx,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.exp_etaPhiSum_eq_kroneckerSym
+
+end Drk11
+
+end Run4DedekindRademacher
+
+/-! ## ETA-01 — Ligozat at general `N` in Kronecker-character form
+(`Lean/SocrateAI/ModularForms/EtaLigozatGeneral.lean`)
+
+FORTY-THREE guards with the standard footprint and FOUR inverted tripwires.
+
+WHAT IS PROVED (standard footprint): the Kronecker sign law, the `c < 0` and `c = 0` strata of
+ETA-01 at EVERY `N`, the reduction `etaMultiplierVal_eq_kroneckerSym_of_pos` that turns the
+`c > 0` slice into all of `Γ₀(N)`, ETA-01 in full for `0 < N ≤ 4` including the packaged
+`ModularForm (Γ₀ N) k` term `etaQuotientModularFormOfLeFour`, and the `N = 17` refutation of
+`ligozat_trivial_multiplier_of_twelve_dvd`.
+
+WHAT IS OPEN (inverted tripwires): `etaMultiplierVal_eq_kroneckerSym`, `ligozat_general`,
+`ligozat_kronecker_transform` and `etaQuotientModularFormGeneral` still depend on `sorryAx`, and
+they depend on it through EXACTLY ONE declaration — `DRK-11`'s `exp_etaPhiSum_eq_kroneckerSym`,
+whose own inverted tripwire sits in section `Drk11` above.  Discharging DRK-11 breaks all five
+guards at once, which is the point: "ETA-01 is open, and DRK-11 is the only reason" cannot go
+stale. -/
+
+section Eta01
+
+/-! ### The sign-discipline gate -/
+
+/-- info: 'SocrateAI.ModularForms.eta01_pin_num_N17' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_pin_num_N17
+
+/-- info: 'SocrateAI.ModularForms.eta01_pin_num_N17_pos' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_pin_num_N17_pos
+
+/-- info: 'SocrateAI.ModularForms.eta01_pin_num_N3_neg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_pin_num_N3_neg
+
+/-- info: 'SocrateAI.ModularForms.eta01_pin_num_N3_neg_k' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_pin_num_N3_neg_k
+
+/-- info: 'SocrateAI.ModularForms.eta01_pin_sym_N17_pos_d' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_pin_sym_N17_pos_d
+
+/-- info: 'SocrateAI.ModularForms.eta01_pin_sym_N17_neg_d' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_pin_sym_N17_neg_d
+
+/-- info: 'SocrateAI.ModularForms.eta01_pin_sym_N3_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_pin_sym_N3_one
+
+/-- info: 'SocrateAI.ModularForms.eta01_pin_sym_N3_neg_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_pin_sym_N3_neg_one
+
+/-- info: 'SocrateAI.ModularForms.eta01_pin_sym_N3_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_pin_sym_N3_two
+
+/-- info: 'SocrateAI.ModularForms.eta01_pin_sym_N3_neg_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_pin_sym_N3_neg_two
+
+/-- info: 'SocrateAI.ModularForms.eta01_pin_N17_entries' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_pin_N17_entries
+
+/-- info: 'SocrateAI.ModularForms.eta01_pin_N17_mem' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_pin_N17_mem
+
+/-- info: 'SocrateAI.ModularForms.eta01_pin_N3negA_entries' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_pin_N3negA_entries
+
+/-- info: 'SocrateAI.ModularForms.eta01_pin_N3negB_entries' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_pin_N3negB_entries
+
+/-- info: 'SocrateAI.ModularForms.eta01_pin_R17_sum' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_pin_R17_sum
+
+/-- info: 'SocrateAI.ModularForms.eta01_pin_R17_congr1_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_pin_R17_congr1_value
+
+/-- info: 'SocrateAI.ModularForms.eta01_pin_R17_congr2_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_pin_R17_congr2_value
+
+/-- info: 'SocrateAI.ModularForms.eta01_R17_congr1' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_R17_congr1
+
+/-- info: 'SocrateAI.ModularForms.eta01_R17_congr2' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_R17_congr2
+
+/-- info: 'SocrateAI.ModularForms.eta01_pin_twelve_dvd' depends on axioms: [propext] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_pin_twelve_dvd
+
+/-- info: 'SocrateAI.ModularForms.eta01_neg_control_sign_law_needs_numerator_sign' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_neg_control_sign_law_needs_numerator_sign
+
+/-- info: 'SocrateAI.ModularForms.eta01_neg_control_sign_law_not_always_flip' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_neg_control_sign_law_not_always_flip
+
+/-! ### The Kronecker sign law and the numerator's sign -/
+
+/-- info: 'SocrateAI.ModularForms.kroneckerSym_neg_right_of_nonneg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.kroneckerSym_neg_right_of_nonneg
+
+/-- info: 'SocrateAI.ModularForms.kroneckerSym_neg_right_of_neg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.kroneckerSym_neg_right_of_neg
+
+/-- info: 'SocrateAI.ModularForms.ligozat_prod_pos' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.ligozat_prod_pos
+
+/-- info: 'SocrateAI.ModularForms.ligozatKroneckerNum_pos_of_even' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.ligozatKroneckerNum_pos_of_even
+
+/-- info: 'SocrateAI.ModularForms.ligozatKroneckerNum_neg_of_odd' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.ligozatKroneckerNum_neg_of_odd
+
+/-- info: 'SocrateAI.ModularForms.kroneckerSym_ligozat_neg_right' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.kroneckerSym_ligozat_neg_right
+
+/-! ### The `c = 0` stratum -/
+
+/-- info: 'SocrateAI.ModularForms.T_zpow_lower_right' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.T_zpow_lower_right
+
+/-- info: 'SocrateAI.ModularForms.neg_T_zpow_lower_right' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.neg_T_zpow_lower_right
+
+/-- info: 'SocrateAI.ModularForms.T_zpow_mem_Gamma0' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.T_zpow_mem_Gamma0
+
+/-- info: 'SocrateAI.ModularForms.etaMultiplierVal_T_zpow' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaMultiplierVal_T_zpow
+
+/-- info: 'SocrateAI.ModularForms.etaMultiplierVal_eq_kroneckerSym_T_zpow' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaMultiplierVal_eq_kroneckerSym_T_zpow
+
+/-- info: 'SocrateAI.ModularForms.etaMultiplierVal_eq_kroneckerSym_neg_T_zpow' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaMultiplierVal_eq_kroneckerSym_neg_T_zpow
+
+/-! ### THE REDUCTION — the file's main proved theorem -/
+
+/-- info: 'SocrateAI.ModularForms.even_of_lower_right_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.even_of_lower_right_zero
+
+/-- info: 'SocrateAI.ModularForms.etaMultiplierVal_eq_kroneckerSym_of_pos' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaMultiplierVal_eq_kroneckerSym_of_pos
+
+/-! ### ETA-01 for `0 < N ≤ 4`, PROVED, including a genuine `ModularForm` term -/
+
+/-- info: 'SocrateAI.ModularForms.etaMultiplierVal_eq_kroneckerSym_of_le_four' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaMultiplierVal_eq_kroneckerSym_of_le_four
+
+/-- info: 'SocrateAI.ModularForms.eta01_reduction_matches_le_four' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_reduction_matches_le_four
+
+/-- info: 'SocrateAI.ModularForms.etaQuotientH_slash_of_kronecker' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaQuotientH_slash_of_kronecker
+
+/-- info: 'SocrateAI.ModularForms.etaQuotientModularFormOfLeFour' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaQuotientModularFormOfLeFour
+
+/-! ### The `N = 17` refutation of the `12 ∣ k` form -/
+
+/-- info: 'SocrateAI.ModularForms.eta01_seventeen_kronecker_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_seventeen_kronecker_value
+
+/-- info: 'SocrateAI.ModularForms.eta01_seventeen_hchi_fails' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_seventeen_hchi_fails
+
+/-- info: 'SocrateAI.ModularForms.eta01_seventeen_refutes_trivial_multiplier' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.eta01_seventeen_refutes_trivial_multiplier
+
+/-! ### INVERTED TRIPWIRES — ETA-01 general `N` is STILL OPEN
+
+Each of the four PASSES only while `DRK-11` is undischarged.  Proving `DRK-11` breaks all four
+in the same commit, which is exactly the intent: nobody can claim ETA-01 without editing here. -/
+
+/-- info: 'SocrateAI.ModularForms.etaMultiplierVal_eq_kroneckerSym' depends on axioms: [propext,
+ sorryAx,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaMultiplierVal_eq_kroneckerSym
+
+/-- info: 'SocrateAI.ModularForms.ligozat_general' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.ligozat_general
+
+/-- info: 'SocrateAI.ModularForms.ligozat_kronecker_transform' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.ligozat_kronecker_transform
+
+/-- info: 'SocrateAI.ModularForms.etaQuotientModularFormGeneral' depends on axioms: [propext,
+ sorryAx,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaQuotientModularFormGeneral
+
+end Eta01
+
+
+/-! ## DRK-12 — Ligozat at level 11 (`EtaLigozatLevelEleven.lean`)
+
+`η(z)²·η(11z)²` on `Γ₀(11)`, weight 2.  Level 11 is beyond run 3's `F3.2-C3` reach because
+`Γ̄₀(11)` has no elliptic elements.  Fifty-three guards are POSITIVE (`sorry`-free) and ONE is an
+INVERTED tripwire certifying that the route through `ligozat_general` is still open. -/
+
+section Drk12
+
+
+/-! ### DRK-12 — the sign-discipline gate
+
+Twenty pins.  Every `etaPhiSum` value was computed independently in Python (`fractions.Fraction`,
+`Int.fract`/`dedekindSaw`/`dedekindSum`/`etaPhiSum` re-implemented from the Lean SOURCE) before it
+was written, and the re-implementation first reproduced `drk11_phi_N11`, `drk11_phi_N3a/b/c/d` and
+`drk11_phi_N7` exactly.  A 2376-matrix sweep of `Γ₀(11)` with `c > 0` found zero mismatches. -/
+
+/-- info: 'SocrateAI.ModularForms.drk12_pin_R11_sum' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_pin_R11_sum
+
+/-- info: 'SocrateAI.ModularForms.drk12_pin_R11_congr1_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_pin_R11_congr1_value
+
+/-- info: 'SocrateAI.ModularForms.drk12_pin_R11_congr2_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_pin_R11_congr2_value
+
+/-- info: 'SocrateAI.ModularForms.drk12_R11_congr1' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_R11_congr1
+
+/-- info: 'SocrateAI.ModularForms.drk12_R11_congr2' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_R11_congr2
+
+/-- info: 'SocrateAI.ModularForms.drk12_phi_h_1_10' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_phi_h_1_10
+
+/-- info: 'SocrateAI.ModularForms.drk12_phi_h_2_5' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_phi_h_2_5
+
+/-- info: 'SocrateAI.ModularForms.drk12_phi_h_3_7' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_phi_h_3_7
+
+/-- info: 'SocrateAI.ModularForms.drk12_phi_h_4_8' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_phi_h_4_8
+
+/-- info: 'SocrateAI.ModularForms.drk12_phi_h_5_2' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_phi_h_5_2
+
+/-- info: 'SocrateAI.ModularForms.drk12_phi_h_6_9' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_phi_h_6_9
+
+/-- info: 'SocrateAI.ModularForms.drk12_phi_h_7_3' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_phi_h_7_3
+
+/-- info: 'SocrateAI.ModularForms.drk12_phi_h_8_4' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_phi_h_8_4
+
+/-- info: 'SocrateAI.ModularForms.drk12_phi_h_9_6' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_phi_h_9_6
+
+/-- info: 'SocrateAI.ModularForms.drk12_phi_h_10_1' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_phi_h_10_1
+
+/-- info: 'SocrateAI.ModularForms.drk12_pin_num_eleven' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_pin_num_eleven
+
+/-- info: 'SocrateAI.ModularForms.drk12_pin_sym_four' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_pin_sym_four
+
+/-- info: 'SocrateAI.ModularForms.drk12_pin_sym_three' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_pin_sym_three
+
+/-- info: 'SocrateAI.ModularForms.drk12_neg_control_sym_eleven' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_neg_control_sym_eleven
+
+/-- info: 'SocrateAI.ModularForms.drk12_neg_control_phi_distinct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_neg_control_phi_distinct
+
+/-! ### DRK-12 — generation of `Γ₀(11)`
+
+`Γ̄₀(11)` is free of rank 3 with NO elliptic elements, so run 3's `F3.2-C3` route cannot supply a
+single generator value here.  `S_not_mem_closure_gensP11` certifies the closure is PROPER. -/
+
+/-- info: 'SocrateAI.ModularForms.gamma0GensP11' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.gamma0GensP11
+
+/-- info: 'SocrateAI.ModularForms.drk12_mem_h_2_5' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_mem_h_2_5
+
+/-- info: 'SocrateAI.ModularForms.drk12_mem_h_3_7' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_mem_h_3_7
+
+/-- info: 'SocrateAI.ModularForms.drk12_mem_h_4_8' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_mem_h_4_8
+
+/-- info: 'SocrateAI.ModularForms.drk12_mem_h_6_9' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_mem_h_6_9
+
+/-- info: 'SocrateAI.ModularForms.gamma0GensP11_subset' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.gamma0GensP11_subset
+
+/-- info: 'SocrateAI.ModularForms.closure_gamma0GensP11' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.closure_gamma0GensP11
+
+/-- info: 'SocrateAI.ModularForms.S_not_mem_closure_gensP11' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.S_not_mem_closure_gensP11
+
+/-! ### DRK-12 — the multiplier of `η²·η(11·)²` is trivial on `Γ₀(11)` -/
+
+/-- info: 'SocrateAI.ModularForms.drk12_mult_h_2_5' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_mult_h_2_5
+
+/-- info: 'SocrateAI.ModularForms.drk12_mult_h_3_7' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_mult_h_3_7
+
+/-- info: 'SocrateAI.ModularForms.drk12_mult_h_4_8' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_mult_h_4_8
+
+/-- info: 'SocrateAI.ModularForms.drk12_mult_h_6_9' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_mult_h_6_9
+
+/-- info: 'SocrateAI.ModularForms.etaMultiplierHom_eleven_eq_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaMultiplierHom_eleven_eq_one
+
+/-- info: 'SocrateAI.ModularForms.etaMultiplierVal_eleven_eq_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaMultiplierVal_eleven_eq_one
+
+/-! ### DRK-12 — Ligozat's character at level 11, and `DRK-11` at `N = 11`
+
+`exp_etaPhiSum_eq_kroneckerSym_eleven` is `DRK-11`'s exact conclusion at a level OUTSIDE
+`DRK-11A`'s `0 < N ≤ 4`.  It does not close `DRK-11`. -/
+
+/-- info: 'SocrateAI.ModularForms.drk12_eleven_not_dvd' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_eleven_not_dvd
+
+/-- info: 'SocrateAI.ModularForms.kroneckerSym_eleven_eq_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.kroneckerSym_eleven_eq_one
+
+/-- info: 'SocrateAI.ModularForms.etaMultiplierVal_eq_kroneckerSym_eleven' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaMultiplierVal_eq_kroneckerSym_eleven
+
+/-- info: 'SocrateAI.ModularForms.exp_etaPhiSum_eq_kroneckerSym_eleven' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.exp_etaPhiSum_eq_kroneckerSym_eleven
+
+/-! ### DRK-12 — THE HEADLINE
+
+`ModularForm.etaProductEleven_transform` is FLT's theorem of the same name, statement for
+statement, proved here `sorry`-free by an INDEPENDENT route (ATTRIBUTION.md §DRK-12).  FLT's
+`CuspForm.exists_gamma0_eleven_apply_eq_eta_sq_mul_eta_sq` is NOT reproduced — cusp vanishing is
+`F3.1-OBSTRUCTED`. -/
+
+/-- info: 'SocrateAI.ModularForms.etaQuotientH_eleven_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaQuotientH_eleven_eq
+
+/-- info: 'SocrateAI.ModularForms.ModularForm.etaProductEleven_transform' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.ModularForm.etaProductEleven_transform
+
+/-- info: 'SocrateAI.ModularForms.etaQuotientH_transform_p11' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaQuotientH_transform_p11
+
+/-- info: 'SocrateAI.ModularForms.etaQuotientH_eleven_slash' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaQuotientH_eleven_slash
+
+/-! ### DRK-12 — comparators
+
+`drk12_matches_pin_N11_even_d` makes the generation route reproduce a value fixed OUTSIDE Lean at
+a matrix that appears nowhere in its proof.  `drk12_le_four_routeA` / `routeB` are two proofs of
+one numeric statement at `N = 4` by routes sharing no step.  No `Eq` between proof terms is
+written: that comparator is `rfl` under proof irrelevance and carries no information. -/
+
+/-- info: 'SocrateAI.ModularForms.drk12_matN11_mem' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_matN11_mem
+
+/-- info: 'SocrateAI.ModularForms.drk12_matN11_pos' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_matN11_pos
+
+/-- info: 'SocrateAI.ModularForms.drk12_matches_pin_N11_even_d' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_matches_pin_N11_even_d
+
+/-- info: 'SocrateAI.ModularForms.drk12_pin_N11_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_pin_N11_value
+
+/-- info: 'SocrateAI.ModularForms.drk12_R4_sum' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_R4_sum
+
+/-- info: 'SocrateAI.ModularForms.drk12_R4_congr1' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_R4_congr1
+
+/-- info: 'SocrateAI.ModularForms.drk12_R4_congr2' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_R4_congr2
+
+/-- info: 'SocrateAI.ModularForms.drk12_matN4_mem' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_matN4_mem
+
+/-- info: 'SocrateAI.ModularForms.drk12_matN4_pos' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_matN4_pos
+
+/-- info: 'SocrateAI.ModularForms.drk12_le_four_routeB' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_le_four_routeB
+
+/-- info: 'SocrateAI.ModularForms.drk12_le_four_routeA' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.drk12_le_four_routeA
+
+/-! ### DRK-12 — INVERTED TRIPWIRE: the `ligozat_general` route is STILL OPEN
+
+The SAME statement as `ModularForm.etaProductEleven_transform`, derived from `ligozat_general`
+instead of from the generation argument.  It PASSES only while `DRK-11` is undischarged.  The
+contrast between this footprint and the one above is the whole point: level 11 is closed, ETA-01
+is not. -/
+
+/-- info: 'SocrateAI.ModularForms.etaProductEleven_via_ligozat_general' depends on axioms: [propext,
+ sorryAx,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaProductEleven_via_ligozat_general
+
+end Drk12

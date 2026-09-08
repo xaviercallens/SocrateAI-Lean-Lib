@@ -17,7 +17,11 @@ Fricke/Atkin–Lehner theory onto its formal counterpart; `—` means not yet fo
 | …and holomorphy + cusp conditions (`W_N` swaps 0 ↔ ∞) | `frickeModularOperator`, `isCusp_frickeW_smul`, `frickeW_conjAct_le` | FRK-09 |
 | `N^{k/2−1}`-normalised operator is an involution; ±1 eigenspaces | — | FRK-10 |
 | The full family `W_Q`, `Q ∥ N` | — | ALQ-01 |
-| Ligozat criterion for eta-quotients on `Γ₀(N)` | — | ETA-01 |
+| Ligozat criterion for eta-quotients on `Γ₀(N)`, general `N` | `ligozat_general`, `ligozat_kronecker_transform`, `etaQuotientModularFormGeneral` (**statements only** — they inherit DRK-11's `sorry`) | ETA-01 |
+| …its `c ≤ 0` half: `c > 0` slice ⟹ all of `Γ₀(N)` | `etaMultiplierVal_eq_kroneckerSym_of_pos` | ETA-01A |
+| …in full at `0 < N ≤ 4`, as a `ModularForm (Γ₀ N) k` | `etaQuotientModularFormOfLeFour` | ETA-01B |
+| `12 ∣ k` does **not** give a trivial multiplier (`N = 17`) | `eta01_seventeen_refutes_trivial_multiplier` | ETA-01R |
+| Petersson closed form for `Φ` mod 24 (the one open input) | — | DRK-11 |
 
 Axiom gate: `Lean/SocrateAI/FinalCheck.lean` (`#guard_msgs in #print axioms`, build-failing).
-Negative control: `scratch/GuardNegativeControl.lean` (must fail; verified 2026-09-06).
+Negative control: `verification/GuardNegativeControl.lean` (must fail; verified 2026-09-07; see `verification/README.md`).
