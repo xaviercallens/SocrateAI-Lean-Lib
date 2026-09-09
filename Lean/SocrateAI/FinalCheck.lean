@@ -55,6 +55,10 @@ import SocrateAI.ModularForms.EtaLigozatLevelEleven
 -- audit, so the gate cannot silently regress.
 import Mathlib.NumberTheory.ModularForms.Discriminant
 import Mathlib.NumberTheory.ModularForms.DedekindEta
+-- Run 5 (TDUAL-*).  Importing this HERE makes the run-5 axiom audit a build dependency: the
+-- TDUAL-M0 sign-discipline pins, and the INVERTED tripwires certifying that TDUAL-M1 and TDUAL-01
+-- are still UNPROVED, all fail the build if they drift.
+import SocrateAI.StringTheory.TDualityBridge
 
 open SocrateAI.ModularForms
 
@@ -5148,3 +5152,191 @@ is not. -/
 #guard_msgs in #print axioms SocrateAI.ModularForms.etaProductEleven_via_ligozat_general
 
 end Drk12
+
+
+/-! ### TDUAL-M0 — the T-duality bridge's sign-discipline gate (run 5)
+
+The four decide-pins of `SocrateAI/StringTheory/TDualityBridge.lean`.  Their values were computed
+FIRST from the physics formula `τ ↦ -1/(N·τ)` in exact Gaussian-rational arithmetic and only then
+written as Lean statements; the proofs go through `UpperHalfPlane.coe_smul_of_det_pos` fed by FRK-01
+(`frickeW_mem_GLPos`), so a drift in `frickeMatrix`, in `frickeW`, or in Mathlib's `num`/`denom`
+convention shows up here rather than silently inside `TDUAL-M1`'s general formula. -/
+
+namespace Tdual0Pins
+
+open SocrateAI.StringTheory
+
+/-- info: 'SocrateAI.StringTheory.frickeW_pin_N1_i' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeW_pin_N1_i
+
+/-- info: 'SocrateAI.StringTheory.frickeW_pin_N2_i' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeW_pin_N2_i
+
+/-- info: 'SocrateAI.StringTheory.frickeW_pin_N4_halfI' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeW_pin_N4_halfI
+
+/-- info: 'SocrateAI.StringTheory.frickeW_pin_N1_onePlusI' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeW_pin_N1_onePlusI
+
+/-! #### TDUAL-M1 — the general Fricke formula (run 5, PROVED)
+
+`W_N • τ = -1/(N·τ)` pointwise in `ℂ`, for every `N > 0` and every `τ ∈ ℍ`.  This is the general
+statement the four pins above gate; the pins were discharged first, and all four are re-derivable
+*from* this lemma (checked, not assumed).  It also composes with the already-proved
+`frickeW_sq_smul` through `mul_smul`, so it reduces to `frickeW`'s existing proven behaviour rather
+than sitting beside it.
+
+That the proof is not vacuous is certified by `verification/TDualM1NegControl.lean`, which restates
+this theorem with four wrong right-hand sides under the identical tactic block and must fail with
+exactly four `unsolved goals`. -/
+
+/-- info: 'SocrateAI.StringTheory.frickeW_smul_coe' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeW_smul_coe
+
+/-! #### TDUAL-M2 — the `GL(2,ℝ)` / `SL(2,ℤ)` instance-agreement hinge (run 5, PROVED)
+
+`mapGL_smul_eq_sl_smul` is closed by `rfl`: Mathlib *defines* `UpperHalfPlane.SLAction` as
+`MulAction.compHom ℍ (SpecialLinearGroup.mapGL ℝ)` (MoebiusAction.lean:283-284).  It is therefore
+recorded here for exactly what it is — **definitional unfolding with no mathematical content**,
+mentioning neither `frickeW` nor `Γ₀(N)`, reducing to Mathlib's definition rather than to anything
+of ours.  Its only job is the anti-pun check: FRK-07 is stated on
+`(Gamma0 N).map (Matrix.SpecialLinearGroup.mapGL ℝ)` inside `GL(2,ℝ)`, and without this lemma "the
+group `W_N` normalizes" and "the group that acts on `ℍ` by GPR's fractional-linear formula" would be
+two different Lean objects.  `exists_sl_smul_eq_of_mem_map_Gamma0` is that consequence, made
+explicit.  It must not be presented as evidence that the bridge has substance.
+
+Because the proof is `rfl`, no wrong-right-hand-side control on the general statement could certify
+anything — the tactic does nothing.  The discrimination evidence is the five pins below, which
+evaluate the `GL(2,ℝ)` path and the `SL(2,ℤ)` path **separately** against values computed first in
+exact Gaussian-rational arithmetic from `(aτ+b)/(cτ+d)`, with two of the five matrices asserted in
+the pin to lie in `Γ₀(2)` so that the gate is exercised inside the bridge's own subgroup:
+`γ = 1` at `i` gives `i`; `!![1,1;0,1]` at `i` gives `1+i`; `!![0,-1;1,0]` at `1+i` gives
+`(-1+i)/2`; `!![1,0;2,1] ∈ Γ₀(2)` at `i` gives `(2+i)/5`; `!![3,1;2,1] ∈ Γ₀(2)` at `i` gives
+`(7+i)/5`.  `verification/TDualM2PinNegControl.lean` restates all five with variant right-hand sides
+(transpose, `b`-flip, conjugation) under the identical tactic blocks and must fail with exactly ten
+`unsolved goals` errors; it was confirmed to fail before the general lemma was proved. -/
+
+/-- info: 'SocrateAI.StringTheory.mapGL_sl_pin_id_i' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms mapGL_sl_pin_id_i
+
+/-- info: 'SocrateAI.StringTheory.mapGL_sl_pin_T_i' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms mapGL_sl_pin_T_i
+
+/-- info: 'SocrateAI.StringTheory.mapGL_sl_pin_S_onePlusI' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms mapGL_sl_pin_S_onePlusI
+
+/-- info: 'SocrateAI.StringTheory.mapGL_sl_pin_G0two_lower_i' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms mapGL_sl_pin_G0two_lower_i
+
+/-- info: 'SocrateAI.StringTheory.mapGL_sl_pin_G0two_i' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms mapGL_sl_pin_G0two_i
+
+/-- info: 'SocrateAI.StringTheory.mapGL_smul_eq_sl_smul' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms mapGL_smul_eq_sl_smul
+
+/-- info: 'SocrateAI.StringTheory.exists_sl_smul_eq_of_mem_map_Gamma0' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms exists_sl_smul_eq_of_mem_map_Gamma0
+
+/-! #### TDUAL-M3 — the fractional-linear formula (run 5, PROVED)
+
+`sl_smul_coe_eq_flt` says Mathlib's `SL(2,ℤ)`-action on `ℍ` is `(aτ+b)/(cτ+d)` with the entries read
+off `γ.1` in the positions `0 0, 0 1, 1 0, 1 1`.  What can silently go wrong in such a statement is
+the *entry-position assignment*, not the arithmetic: a transpose, an `a`/`d` swap or a sign on `b`
+or `c` is still well-typed, still an equality in `ℂ`, and still true on symmetric matrices.  So the
+gate below is five pins on matrices chosen to break those symmetries, each asserting the Mathlib
+action value and the `TDUAL-M3` right-hand side *separately* against one value computed first in
+exact Gaussian-rational arithmetic:
+
+| pin | `γ` | `τ` | value |
+| --- | --- | --- | --- |
+| `sl_flt_pin_2111_i`    | `!![2,1;1,1]`  | `i`  | `(3+i)/2`    |
+| `sl_flt_pin_Tsq_i`     | `!![1,2;0,1]`  | `i`  | `2+i`        |
+| `sl_flt_pin_L3_i`      | `!![1,0;3,1]`  | `i`  | `(3+i)/10`   |
+| `sl_flt_pin_G5_i`      | `!![7,2;10,3]` | `i`  | `(76+i)/109` |
+| `sl_flt_pin_negB_twoI` | `!![1,-1;1,0]` | `2i` | `(2+i)/2`    |
+
+Each pin is blind to exactly one variant and the blindness is recorded in `TDualityBridge.lean`
+rather than glossed: `2111` cannot see a transpose (`b = c`), `Tsq` cannot see a `c`-flip or an
+`a`/`d` swap, `L3` cannot see a `b`-flip or an `a`/`d` swap.  `G5` — the only pin with four nonzero
+pairwise-distinct entries, and a member of `Γ₀(5)` — catches all five variants, including the
+inverted action convention that the `TDUAL-M0` gate provably cannot see.
+`verification/TDualM3PinNegControl.lean` restates all five with the variant right-hand sides under
+identical tactic blocks and must fail with exactly ten `error:` lines; it was confirmed to fail
+**before** `sl_smul_coe_eq_flt` was proved. -/
+
+/-- info: 'SocrateAI.StringTheory.sl_flt_pin_2111_i' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms sl_flt_pin_2111_i
+
+/-- info: 'SocrateAI.StringTheory.sl_flt_pin_Tsq_i' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms sl_flt_pin_Tsq_i
+
+/-- info: 'SocrateAI.StringTheory.sl_flt_pin_L3_i' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms sl_flt_pin_L3_i
+
+/-- info: 'SocrateAI.StringTheory.sl_flt_pin_G5_i' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms sl_flt_pin_G5_i
+
+/-- info: 'SocrateAI.StringTheory.sl_flt_pin_negB_twoI' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms sl_flt_pin_negB_twoI
+
+/-- info: 'SocrateAI.StringTheory.sl_smul_coe_eq_flt' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms sl_smul_coe_eq_flt
+
+/-! #### TDUAL-M4 — the duality squares to the identity on the moduli (run 10, PROVED)
+
+`frickeW_smul_involutive : frickeW hN • frickeW hN • τ = τ`.  Recorded for exactly what it is:
+**the already-proved ℍ-level lemma `frickeW_sq_smul` (`FrickeComposite.lean`) re-associated by
+Mathlib's `mul_smul`**, which is a `MulAction` field.  There is no new mathematics in this node.
+The matrix→ℍ upgrade — the step that consumes `W_N² = -N·I` (FRK-02) together with
+`det (W_N²) = N² > 0` and `denom (W_N²) = -N` — happened in `FrickeComposite.lean`; FRK-02 enters
+here only transitively.  This is the same situation as `TDUAL-M2`'s `rfl`, and is not to be
+presented as a new involution theorem.
+
+Consequently a wrong-right-hand-side control on the general statement certifies nothing: the proof
+is `exact` of an existing lemma, so the tactic does no work.  The discrimination evidence is the
+five two-step pins below, each stated as a *pair* — the intermediate `W_N • τ` and the round trip
+`W_N • W_N • τ` — at points chosen so that `W_N • τ ≠ τ`, which is what `TDUAL-M0`'s self-dual
+point `W₁ • i = i` and fixed point `W₄ • (i/2) = i/2` cannot test.  Values computed first in exact
+Gaussian-rational arithmetic: `N=2` at `i` gives `i/2` then `i`; `N=3` at `2i` gives `i/6` then
+`2i`; `N=1` at `1+i` gives `(-1+i)/2` then `1+i`; `N=2` at `1+i` gives `(-1+i)/4` then `1+i`;
+`N=4` at `i` gives `i/4` then `i`.  The pins run through `frickeW_smul_coe` (TDUAL-M1) applied once
+and twice — a route independent of `frickeW_sq_smul`'s product-matrix computation, so the two
+agree by computation rather than by construction.
+`verification/TDualM4PinNegControl.lean` restates all ten components with wrong values (dropped
+factor of `N` or flipped `b`-entry on the intermediates, the *idempotent* variant
+`W_N • W_N • τ = W_N • τ` on the round trips) under identical tactic blocks and must fail with
+exactly ten `error:` lines; it was confirmed failing **before** `frickeW_smul_involutive` was
+discharged. -/
+
+/-- info: 'SocrateAI.StringTheory.frickeW_invol_pin_N2_i' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeW_invol_pin_N2_i
+
+/-- info: 'SocrateAI.StringTheory.frickeW_invol_pin_N3_twoI' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeW_invol_pin_N3_twoI
+
+/-- info: 'SocrateAI.StringTheory.frickeW_invol_pin_N1_onePlusI' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeW_invol_pin_N1_onePlusI
+
+/-- info: 'SocrateAI.StringTheory.frickeW_invol_pin_N2_onePlusI' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeW_invol_pin_N2_onePlusI
+
+/-- info: 'SocrateAI.StringTheory.frickeW_invol_pin_N4_i' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeW_invol_pin_N4_i
+
+/-- info: 'SocrateAI.StringTheory.frickeW_smul_involutive' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeW_smul_involutive
+
+/-! #### INVERTED TRIPWIRE: TDUAL-01 is STILL OPEN
+
+This guard PASSES only while the bridge is undischarged.  The contrast with the five clean
+footprints above is the point: the gate is closed and the general formula is proved, but the bridge
+is not.  `TDUAL-01` must not be closed before the `SL(2,ℤ)_τ` vs `SL(2,ℤ)_ρ` attribution question
+recorded in `TDualityBridge.lean`'s Status section is settled from GPR §2.4, and before the absence
+of any verified literature anchor for a T-duality element acting as the level-`N` Fricke map at
+`N > 1` is either supplied or stated plainly as a mathematical generalisation with no claimed
+physical counterpart. -/
+
+/-- info: 'SocrateAI.StringTheory.tduality_tau_fricke_bridge' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms tduality_tau_fricke_bridge
+
+end Tdual0Pins

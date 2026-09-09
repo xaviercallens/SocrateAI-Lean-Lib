@@ -7,10 +7,12 @@ lake exe cache get      # ~5 GB of prebuilt Mathlib .olean files — do not skip
 lake build SocrateAI
 ```
 
-Expect ~3767 jobs and **0 errors** (3 `sorry` warnings, all disclosed and DAG-tracked open nodes —
-see `verification/README.md`). The build target includes `SocrateAI.FinalCheck`, which is the
-point: it carries 797 `#guard_msgs in #print axioms` guards, so **a drifted axiom footprint fails
-the build** rather than being silently reported.
+Expect 3768 jobs and **0 errors** (4 `sorry` warnings, all disclosed and DAG-tracked open nodes —
+2 in `EtaMultiplier`, 1 in `EtaLigozatKronecker`, 1 in `StringTheory/TDualityBridge` for the
+still-open, actively-contested `TDUAL-01`; `TDUAL-M4` is proved — an earlier version of this line
+said otherwise and is corrected; see `verification/README.md`). The build target includes
+`SocrateAI.FinalCheck`, which is the point: it carries 822 `#guard_msgs in #print axioms` guards,
+so **a drifted axiom footprint fails the build** rather than being silently reported.
 
 ## What is pinned, and why exactly
 
@@ -63,13 +65,16 @@ machine with too little free disk to hold a second Mathlib.
 ## Checking the artifact yourself
 
 ```bash
-lake build SocrateAI                       # 0 errors; 3 sorry, all DAG-tracked open nodes
-grep -c '#guard_msgs' Lean/SocrateAI/FinalCheck.lean   # 797 axiom guards
+lake build SocrateAI                       # 0 errors; 4 sorry, all DAG-tracked open nodes
+grep -c '#guard_msgs' Lean/SocrateAI/FinalCheck.lean   # 822 axiom guards
 python3 dag/check_dag.py                   # every "proved" node names a real declaration
-lake env lean verification/GuardNegativeControl.lean  # MUST FAIL — else the guards are vacuous
-  # NOTE: run this against the shared pool the way `lake build` above did — if you built with
-  # `--packages=local-packages.json`, prefix that flag on `lake build` (not on `lake env lean`,
-  # which does not accept it) so the .lake/build tree it reads from is populated.
+lake --packages=local-packages.json env lean verification/GuardNegativeControl.lean  # MUST FAIL
+  # NOTE (corrected twice — LL-27, then LL-32): `--packages` is a GLOBAL lake flag and goes
+  # right after `lake`, before the subcommand. `lake env lean FILE --packages=X` fails (lean
+  # itself rejects the flag); `lake env lean FILE` with no flag ALSO fails (missing oleans) —
+  # both exit 1 for an environment reason, which can make a negative control look like it
+  # "passed" when it examined nothing. `lake --packages=X env lean FILE` is the only form
+  # that actually runs the check.
 ```
 
 The last one matters most. A guard that cannot fail proves nothing, so the negative control asserts

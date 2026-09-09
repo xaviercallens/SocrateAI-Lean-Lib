@@ -93,6 +93,15 @@ import SocrateAI.ModularForms.FrickeSlash
 import SocrateAI.ModularForms.FrickeModular
 import SocrateAI.ModularForms.FrickeComposite
 
+-- Run 5 (TDUAL-*): T-duality on the T^2 complex-structure modulus, attempted reduction to the
+-- Fricke involution. TDUAL-M0..M4 are PROVED, sorry-free, and reusable (frickeW_smul_coe links
+-- the GL(2,R)-action language of the Fricke*.lean files to the -1/(N*z) normal form). TDUAL-01,
+-- the bridge itself, is CONTESTED, not merely open: an independent review found it equivalent to
+-- M1 AND M2 AND M3 with no added content, and found no primary-literature support for the level-N
+-- physics attribution at any N > 1 (see the DAG node and Lean4_Fricke_Involution.tex). Its sorry
+-- stays open under an inverted FinalCheck tripwire; do not close it as a proof of this statement.
+import SocrateAI.StringTheory.TDualityBridge
+
 -- Eta quotients & Ligozat's criterion (F3.1 arithmetic layer, F3.2 analytic layer)
 import SocrateAI.ModularForms.EtaQuotient
 import SocrateAI.ModularForms.EtaQuotientModularity
