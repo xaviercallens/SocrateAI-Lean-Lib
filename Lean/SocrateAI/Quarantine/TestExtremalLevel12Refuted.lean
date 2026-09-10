@@ -1,11 +1,13 @@
 /-
-Copyright (c) 2026 SocrateAI Contributors. All rights reserved.
-Released under MIT license as described in the file LICENSE.
-Authors: SocrateAI Team
--/
-import SocrateAI.Moonshine.ExtremalEtaQuotient
+Copyright (c) 2026 SocrateAI Contributors. Released under MIT license.
 
-namespace Tests.TestExtremalEta
+QUARANTINED alongside `Quarantine/ExtremalLevel12Refuted.lean` — see that file's header for why.
+These are re-derivations of the same true numerals, kept for the record. NOT imported from
+`Lean/Tests.lean`, so not part of the default `Tests` build target.
+-/
+import SocrateAI.Quarantine.ExtremalLevel12Refuted
+
+namespace SocrateAI.Quarantine.TestExtremalLevel12Refuted
 
 open SocrateAI.Moonshine.ExtremalEtaQuotient
 

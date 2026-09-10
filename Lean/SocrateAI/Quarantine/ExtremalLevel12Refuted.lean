@@ -1,21 +1,42 @@
 /-
-Copyright (c) 2026 SocrateAI Contributors. All rights reserved.
-Released under MIT license as described in the file LICENSE.
-Authors: SocrateAI Team
+Copyright (c) 2026 SocrateAI Contributors. Released under MIT license.
 
-TIER A — All theorems are sorry-free and kernel-verified.
+# QUARANTINE — numeral arithmetic that does not support the modular-form claim it was named for
 
-Source: docs/Extremal_Level12_EtaQuotient.tex
-  "Algebraic Recurrence and Exact Rademacher Series for an Extremal
-   Level-12 Weakly Holomorphic Eta-Quotient"
+**This module is deliberately NOT imported by `Lean/SocrateAI.lean` and is not part of the
+default build target**, matching this project's "quarantine, don't delete" convention (see
+`Quarantine/LigozatTrivialMultiplierRefuted.lean` for the sibling precedent).
 
-This module formalizes:
-1. The 12-component exponent vector e and its modular weight k = -183/2.
-2. The zero-point energy E₀ = -425/6 and Laurent principal terms count (71).
-3. The effective central charge c_eff = 1701.
-4. The exact Newton-Euler logarithmic derivative recurrence weights W(j).
-5. Certified integer Fourier coefficients a(0) through a(8) with prime factorizations.
-6. The Rademacher Bessel order ν = 185/2 and asymptotic power scalings.
+Originally `Moonshine/ExtremalEtaQuotient.lean`, source `docs/Extremal_Level12_EtaQuotient.tex`
+("Algebraic Recurrence and Exact Rademacher Series for an Extremal Level-12 Weakly Holomorphic
+Eta-Quotient"). Its former header claimed "TIER A — all theorems are sorry-free and kernel
+verified" for a module formalizing "the extremal level-12 exponent vector," its "modular weight,"
+and its "zero-point energy." **That framing is the defect, found by audit on 2026-09-10 (see
+`docs/Lean4_FrickeEigenspace.tex` \S on the level-12 withdrawal, and LL-39/LL-40 in this
+programme's ledger).**
+
+An eta-quotient `∏_δ η(δτ)^{r_δ}` is modular on `Γ₀(N)` only when `δ` ranges over the DIVISORS of
+`N` — see `SocrateAI.ModularForms.etaQuotient`, whose product is over `N.divisors`. The exponent
+vector below is indexed `d = 1,…,12` and carries a nonzero exponent on `d = 5,7,8,9,10,11`, none
+of which divides `12`. `lcm{d : eᵈ ≠ 0} = 27720`, so the object this module's docstrings describe
+lives (if anywhere) on `Γ₀(27720)`, not `Γ₀(12)` — "level 12" is false, and every derived quantity
+(the weight, the zero-point energy, the principal-part count, the central charge, the Rademacher
+rate) inherits the wrong indexing. The weight `k = -183/2` is separately half-integral, outside
+this library's integer-weight framework.
+
+**No theorem below is false.** Every one is a `by decide` fact about integers — `24+23-14+9(-24) =
+-183`, `gcd(1700,24)=4`, `⌊425/6⌋+1=71`, `1-24(-425)/6=1701` — and every one is correct arithmetic.
+The module contains zero occurrences of `eta`, `etaQuotient`, `Gamma0`, `ModularForm`, or
+`Mathlib`, and no `import` at all: the modular-form content existed only in the docstrings you are
+now reading corrected. This is the sharp form of LL-1/G1.1: a numeral-only theorem is true
+regardless of whether the story told about it is right, so a green, sorry-free, "kernel-verified"
+build here was always compatible with the claim above being false, because the claim was never
+inside the build. `dag/theorems.jsonl`'s `PHY-01` depended on this module and is re-scoped
+accordingly; it no longer claims a level-12 object.
+
+**Do not import this module. Do not cite it as evidence for a level-12 eta-quotient.** Whether an
+interesting eta-quotient extremal at `Γ₀(12)` — exponents supported on `{1,2,3,4,6,12}`, integral
+weight — exists is now an open question, not a claim; nothing here answers it.
 -/
 
 namespace SocrateAI.Moonshine.ExtremalEtaQuotient

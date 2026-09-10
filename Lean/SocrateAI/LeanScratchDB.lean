@@ -23,7 +23,6 @@ TIER A — All theorems are kernel-verified with 0 sorry axioms.
 -/
 
 import SocrateAI.ChameleonGravity.DACModel
-import SocrateAI.Moonshine.ExtremalEtaQuotient
 import SocrateAI.Moonshine.RAMA_EtaQuotient
 import SocrateAI.Moonshine.MathieuBispectrum
 import SocrateAI.Moonshine.VacuumEnergy
@@ -189,6 +188,17 @@ theorem bispectrum_ratio_exact :
 -- 3. Extremal Level-12 Weakly Holomorphic Eta-Quotients & Rademacher Recurrences
 -- Grounded by: [Ramanujan1916], [HardyRamanujan1918], [Rademacher1937],
 --              [Ono2004], [Martin1996], [DuncanGriffinOno2015], [Bringmann2012]
+--
+-- CORRECTED 2026-09-10 (audit; see Quarantine/ExtremalLevel12Refuted.lean and
+-- docs/Lean4_FrickeEigenspace.tex for the full account -- this comment covers ONLY this section,
+-- sections 1/2/4-11 below are unaudited by that pass). `extremal_level := 12` is FALSE: the
+-- exponent vector this section's numerals derive from is indexed d=1..12, but an eta-quotient is
+-- modular on Gamma0(N) only when d ranges over the DIVISORS of N; six of its nonzero exponents
+-- sit on d=5,7,8,9,10,11, none dividing 12 (lcm of the support is 27720). No theorem below is
+-- false -- every one is correct integer arithmetic -- but none of them is evidence for a level-12
+-- modular object, and `ligozat_parity_violation` / `ligozat_integrality_violation` just below are
+-- themselves the tell: the vector fails Ligozat's own conditions outright, which is consistent
+-- with it not being a genuine level-12 eta-quotient at all.
 -- =============================================================================
 
 /-- Level of the RAMA / Extremal Eta-Quotient -/

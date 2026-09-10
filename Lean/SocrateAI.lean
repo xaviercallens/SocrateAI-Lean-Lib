@@ -68,8 +68,13 @@ import SocrateAI.ParticlePhysics.PMNS
 -- Chameleon Gravity & Modified Gravity (DAC sub-article)
 import SocrateAI.ChameleonGravity.DACModel
 
--- Extremal Level-12 Eta-Quotient (sub-article)
-import SocrateAI.Moonshine.ExtremalEtaQuotient
+-- Extremal Level-12 Eta-Quotient (sub-article) -- QUARANTINED 2026-09-10: its exponent vector is
+-- indexed over d=1..12 rather than the divisors of 12, so "level 12" is false and every derived
+-- quantity (weight, zero-point energy, central charge) inherits the wrong indexing. No theorem in
+-- it is false (all numeral arithmetic), only its docstrings' claim about what the arithmetic is
+-- evidence for. See Lean/SocrateAI/Quarantine/ExtremalLevel12Refuted.lean and
+-- docs/Lean4_FrickeEigenspace.tex for the audit. PHY-01 (dag/theorems.jsonl) is re-scoped
+-- accordingly and no longer depends on this content.
 
 -- Modular Forms & Poincaré Upper Half-Plane (sub-article)
 import SocrateAI.ModularForms.PoincareUpperHalfPlane
@@ -134,3 +139,14 @@ import SocrateAI.ModularForms.KroneckerJacobi
 -- 0 < N <= 4, eleven kernel pins and four negative controls.  UNPROVED: general N (one sorry).
 import SocrateAI.ModularForms.EtaLigozatKronecker
 import SocrateAI.ModularForms.EtaLigozatGeneral
+
+-- Run 7 (FRK-11 closed as a STATEMENT, FRK-12..FRK-27, SDF-17..SDF-20): the Fricke EIGENSPACE
+-- DECOMPOSITION on Mathlib's bundled `ModularForm (Gamma0GL N) (2*m)`, built on the already
+-- sorry-free `frickeW_sq_slash` (FRK-10) and `frickeModularOperator` (FRK-09).  STATEMENT LAYER:
+-- FRK-12..FRK-16 and all eleven decide-pins are proved; everything else is `sorry` with an
+-- `-- OPEN:` comment.  The eta-quotient lift ships in TWO honest forms and NEITHER assumes
+-- modularity: SDF-18 takes `f : ModularForm ...` plus `hf : ∀ τ, f τ = etaQuotientH N r τ` as
+-- explicit HYPOTHESES at general N, and SDF-19 is restricted to `0 < N ≤ 4` where the library's
+-- own `etaQuotientModularForm` supplies the transformation law -- and even there Ligozat's
+-- condition (iii) (`hbd`) stays a hypothesis.  Odd weight is VACUOUS (FRK-24) and said so.
+import SocrateAI.ModularForms.FrickeEigenspace

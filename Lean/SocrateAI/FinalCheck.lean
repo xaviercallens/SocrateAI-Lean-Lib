@@ -64,6 +64,7 @@ import SocrateAI.StringTheory.TDualityBridge
 -- build if their footprints drift.  It also puts the still-`sorry` SDF-01 … SDF-13 statements in
 -- FinalCheck's cone, which is what the INVERTED tripwires at the end of section `SdfDef01` pin.
 import SocrateAI.ModularForms.EtaQuotientFrickeSelfDual
+import SocrateAI.ModularForms.FrickeEigenspace
 
 open SocrateAI.ModularForms
 
@@ -8271,3 +8272,777 @@ section SdfPin04
 #guard_msgs in #print axioms selfDual_eigen_pin_level_four_weight_zero_no_evidence_constant
 
 end SdfPin04
+
+/-! ## Run 7/10 — `FRK-11` … `FRK-27` + `FRK-42` … `FRK-47`: the Fricke eigenspace layer
+
+COUNTS RECOMPUTED AGAINST THE CURRENT SOURCE THIS RUN (run 10), not carried forward — the text
+here previously said 76 declarations / 29 `sorry` / 6 theorems + 37 pins and has drifted twice
+already.  Method: strip block comments from `FrickeEigenspace.lean`, count
+`theorem`/`lemma`/`def` heads, and cross-check against the build log's
+`declaration uses 'sorry'` warnings.
+
+  88 declarations   =  84 theorems + 4 defs
+   9 declarations carry `sorry` — ALL NINE are in the `SDF-17`…`SDF-20` eta-quotient block at the
+     end of the file, and every one carries an `-- OPEN:` comment naming the remaining work
+  79 declarations are sorry-free  =  75 theorems + 4 defs
+
+WHAT CHANGED IN RUN 10.  The whole `FRK-*` block is now PROVED, so the guards below are no longer
+"the proved part only": `FRK-11` (`frickeInvolution_sq`, the involution proper) is proved and its
+former sorryAx TRIPWIRE has been replaced by a real guard, and so are `FRK-18b`, `FRK-19a/b/c`,
+`FRK-20a/b`, `FRK-21`, `FRK-22a/b`, `FRK-23a/b`, `FRK-24a/b/c`, `FRK-25a/b`, `FRK-26`,
+`FRK-27a/b/c`, together with six new declarations `FRK-42`…`FRK-47` (the `σ`-branch decide-pins
+and the `σ`-resolution lemma they guard).  `frickeInvolutionLM_apply` was previously left
+deliberately UNGUARDED because `frickeInvolutionLM`'s `map_add'`/`map_smul'` fields were `sorry`;
+those fields are now proved, so it is guarded.
+
+WHAT IS STILL DELIBERATELY UNGUARDED, and must stay that way: `SDF-17`…`SDF-20`.  Those nine
+declarations are open, their DAG nodes say so, and a guard here would be the exact LL-33 failure
+mode of dressing an unproved statement as a checked one.  A sorryAx TRIPWIRE on one of them is
+kept at the end of this section so the footprint cannot go stale in the optimistic direction.
+
+WHAT THE PINS ARE FOR (sign/definitional discipline, run before the general lemmas were stated).
+Three spellings of one constant are in play — `(N^2)^(k-1)·(-N)^(-k)` (the shape `frickeW_sq_slash`
+actually produces), `(-1)^k·N^(k-2)` (the shape its docstring advertises) and the normalisation
+`N^(1-m)`.  PINs 1–5 evaluate the first against the second at literal numerals, including one ODD
+`k` where the value is NEGATIVE (`-2`, PIN 3) and one NEGATIVE exponent `k-2 = -2` (PIN 5).
+PINs 6–7 check the `N^(1-m)` cancellation, PIN 7 at `m = 0` where the normalisation MULTIPLIES by
+`N` — the direction FRK-10's node text records as previously unfixed.  PINs A–D check the
+eigenvalue normalisation `N^(1-m)·N⁻¹·frickeEigenvalue N (2m) = (-1)^m` against `frickeEigenvalue`
+values already proved sorry-free in `EtaQuotientFrickeSelfDual.lean`, at three levels and both
+signs; PIN B lands on `-1`.
+
+MÖBIUS PINs M1–M5 (added for `FRK-14`, DAG `FRK-32`…`FRK-36`) are a separate family and are
+deliberately labelled M-something so as not to collide with `PIN A–D` above.  Each evaluates
+`W_N • τ` at a literal `N` and a literal `τ` from `coe_smul_of_det_pos` and `frickeMatrix`, never
+through `frickeW_smul_coe_neg_inv`, against a value computed first by hand in exact Gaussian
+rationals.  Between them they separate the transpose `!![0,N;-1,0]`, the `b`-flip `!![0,1;N,0]`
+and a dropped `N`.  What NO pin here can separate: `W_N` from `W_N⁻¹`, because `W_N² = -N·I` is
+scalar and the two induce the same map on `ℍ`.  That limit is stated, not hidden.
+-/
+section Frk1x
+
+/-- info: 'SocrateAI.ModularForms.frickeW_det_val_pin_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_det_val_pin_one
+
+/-- info: 'SocrateAI.ModularForms.frickeW_det_val_pin_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_det_val_pin_two
+
+/-- info: 'SocrateAI.ModularForms.frickeW_det_val_pin_twelve' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_det_val_pin_twelve
+
+/-- info: 'SocrateAI.ModularForms.frickeW_det_val_pos_pin_thirteen' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_det_val_pos_pin_thirteen
+
+/-- info: 'SocrateAI.ModularForms.frickeW_det_val_pos' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_det_val_pos
+
+/-- info: 'SocrateAI.ModularForms.frickeW_denom' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_denom
+
+/-! ### FRK-32 .. FRK-36 — the five Möbius-action decide-pins guarding FRK-14 -/
+
+/-- info: 'SocrateAI.ModularForms.frickeW_smul_pin_two_I' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_smul_pin_two_I
+
+/-- info: 'SocrateAI.ModularForms.frickeW_smul_pin_three_I' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_smul_pin_three_I
+
+/-- info: 'SocrateAI.ModularForms.frickeW_smul_pin_one_onePlusI' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_smul_pin_one_onePlusI
+
+/-- info: 'SocrateAI.ModularForms.frickeW_smul_pin_two_onePlusI' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_smul_pin_two_onePlusI
+
+/-- info: 'SocrateAI.ModularForms.frickeW_smul_pin_twelve_twoI' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_smul_pin_twelve_twoI
+
+/-- info: 'SocrateAI.ModularForms.frickeW_smul_coe_neg_inv' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_smul_coe_neg_inv
+
+/-! ### FRK-37 .. FRK-41 — the five slash-constant decide-pins guarding FRK-15 -/
+
+/-- info: 'SocrateAI.ModularForms.slash_frickeW_const_pin_two_four' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.slash_frickeW_const_pin_two_four
+
+/-- info: 'SocrateAI.ModularForms.slash_frickeW_const_pin_three_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.slash_frickeW_const_pin_three_two
+
+/-- info: 'SocrateAI.ModularForms.slash_frickeW_const_pin_two_three' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.slash_frickeW_const_pin_two_three
+
+/-- info: 'SocrateAI.ModularForms.slash_frickeW_const_pin_five_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.slash_frickeW_const_pin_five_zero
+
+/-- info: 'SocrateAI.ModularForms.slash_frickeW_const_pin_twelve_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.slash_frickeW_const_pin_twelve_two
+
+/-- info: 'SocrateAI.ModularForms.slash_frickeW_apply' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.slash_frickeW_apply
+
+/-- info: 'SocrateAI.ModularForms.frickeW_sq_const_pin_two_four' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_sq_const_pin_two_four
+
+/-- info: 'SocrateAI.ModularForms.frickeW_sq_const_pin_three_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_sq_const_pin_three_two
+
+/-- info: 'SocrateAI.ModularForms.frickeW_sq_const_pin_two_three' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_sq_const_pin_two_three
+
+/-- info: 'SocrateAI.ModularForms.frickeW_sq_const_pin_six_twelve' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_sq_const_pin_six_twelve
+
+/-- info: 'SocrateAI.ModularForms.frickeW_sq_const_pin_five_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_sq_const_pin_five_zero
+
+/-- info: 'SocrateAI.ModularForms.frickeInvolution_const_pin_three_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeInvolution_const_pin_three_two
+
+/-- info: 'SocrateAI.ModularForms.frickeInvolution_const_pin_six_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeInvolution_const_pin_six_zero
+
+/-- info: 'SocrateAI.ModularForms.frickeInvolution_const_pin_two_three' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeInvolution_const_pin_two_three
+
+/-- info: 'SocrateAI.ModularForms.frickeInvolution_const_pin_five_negone' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeInvolution_const_pin_five_negone
+
+/-- info: 'SocrateAI.ModularForms.frickeInvolution_const_pin_ten_five' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeInvolution_const_pin_ten_five
+
+/-- info: 'SocrateAI.ModularForms.frickeInvolution_const_pin_wrong_direction' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeInvolution_const_pin_wrong_direction
+
+/-- info: 'SocrateAI.ModularForms.frickeInvolution_const_pin_wrong_direction_ne_one' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeInvolution_const_pin_wrong_direction_ne_one
+
+/-- info: 'SocrateAI.ModularForms.frickeInvolution_const_reconcile' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeInvolution_const_reconcile
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_normalised_pin_six_twelve' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeEigenvalue_normalised_pin_six_twelve
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_normalised_pin_one_two' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeEigenvalue_normalised_pin_one_two
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_normalised_pin_six_zero' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeEigenvalue_normalised_pin_six_zero
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_normalised_pin_six_neg_twelve' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeEigenvalue_normalised_pin_six_neg_twelve
+
+/-! ### `FRK-17` — now PROVED, so now guarded (this block was previously an explicit NON-guard).
+
+`frickeW_sq_const_simplify` is the identity `(N^2)^(k-1)·(-N)^(-k) = (-1)^k·N^(k-2)` at GENERAL
+`k : ℤ`.  It closed with no parity split: `mul_zpow` separates the `-1`, and `(-1)^(-k) = (-1)^k`
+follows from `zpow_neg` together with `(-1)^k·(-1)^k = ((-1)·(-1))^k = 1`.
+
+Its pins come in two families.  PINs 1-5 (guarded above) were laid down when the statement was
+written.  PINs 12-17 below were added when it was proved, and exist to close two holes: PIN 4 was
+ONE-SIDED (it pinned only the left-hand expression to `60466176`), so PIN 12 supplies the matching
+right-hand half at the same `(N,k) = (6,12)`; and PINs 13-16 are four further INDEPENDENTLY
+computed two-sided instances — `(1,-3) ↦ -1`, `(12,2) ↦ 1`, `(7,-1) ↦ -1/343`, `(9,5) ↦ -729` —
+covering negative `k`, odd `k`, a non-prime-power level and large numerals.  PIN 17 is a NEGATIVE
+control on the HYPOTHESIS rather than on the value: it proves the identity FALSE at `N = 0`,
+`k = 2`, so `0 < N` is forced and cannot be dropped. -/
+
+/-- info: 'SocrateAI.ModularForms.frickeW_sq_const_pin_six_twelve_rhs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_sq_const_pin_six_twelve_rhs
+
+/-- info: 'SocrateAI.ModularForms.frickeW_sq_const_pin_one_negthree' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_sq_const_pin_one_negthree
+
+/-- info: 'SocrateAI.ModularForms.frickeW_sq_const_pin_twelve_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_sq_const_pin_twelve_two
+
+/-- info: 'SocrateAI.ModularForms.frickeW_sq_const_pin_seven_negone' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_sq_const_pin_seven_negone
+
+/-- info: 'SocrateAI.ModularForms.frickeW_sq_const_pin_nine_five' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_sq_const_pin_nine_five
+
+/-- info: 'SocrateAI.ModularForms.frickeW_sq_const_pin_nine_five_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_sq_const_pin_nine_five_value
+
+/-- info: 'SocrateAI.ModularForms.frickeW_sq_const_pin_zero_two_false' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_sq_const_pin_zero_two_false
+
+/-- info: 'SocrateAI.ModularForms.frickeW_sq_const_simplify' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_sq_const_simplify
+
+/-! ### `FRK-18` — the normalised Fricke operator, and the pins that force its multiplier.
+
+`frickeInvolution` is a DEFINITION (`kind = "def"` in the DAG), so `check_dag` rule 7 exempts it
+from this file.  It is guarded anyway, for the same reason FRK-09's `frickeModularOperator` is
+guarded a few hundred lines above: a `#print axioms` on a def is the only mechanical statement
+that the def ELABORATES and that nothing in its elaboration reaches `sorryAx` — and this def sits
+under every `FRK-19`…`FRK-27` and `SDF-17`…`SDF-20` statement in the file, all of which are still
+`sorry`.  If a future edit ever routes it through an unproved auxiliary, this guard fails first.
+
+The five pins below are FRK-18's own, and they pin the ONE thing a definition can get wrong: the
+constant.  Mathlib's slash at `W_N` already supplies `N^(-1)` (`det = N`, `denom = N·τ`), while
+the classical Atkin–Lehner normalisation is `N^(-k/2)`; the converting factor is `N^(1-k/2)`, i.e.
+`N^(1-m)` at `k = 2*m`, which is exactly what `frickeInvolution` multiplies by.  Written without
+`Int` division: `N^(-m) = N^(1-m) · N^(-1)`.  PINs 18-21 are that identity plus the literal value
+of both sides at `(N,m) = (4,1)`, `(9,3)`, `(7,0)`, `(5,-2)` — spanning `1-m = 0`, `1-m < 0`,
+`1-m > 0` and `m < 0`.  PIN 22 is a NEGATIVE control: the mirror-image multiplier `N^(1+m)` gives
+`729` where the classical constant is `1/729`, so the sign of `m` is refuted-if-wrong, not merely
+unchecked.
+
+WHAT THESE GUARDS DO NOT SAY.  A def has no mathematical content beyond its type.  The theorems
+that give `frickeInvolution` meaning — `frickeInvolution_apply` (the `@[simp]` unfolding) and
+`frickeInvolution_sq` (FRK-11, the involution property) — are PROVED as of run 10 and carry their
+own guards in the `Frk11` section below; read those, not these, as the mathematical content. -/
+
+/-- info: 'SocrateAI.ModularForms.frickeInvolution' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeInvolution
+
+/-- info: 'SocrateAI.ModularForms.frickeInvolution_mult_pin_four_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeInvolution_mult_pin_four_one
+
+/-- info: 'SocrateAI.ModularForms.frickeInvolution_mult_pin_nine_three' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeInvolution_mult_pin_nine_three
+
+/-- info: 'SocrateAI.ModularForms.frickeInvolution_mult_pin_seven_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeInvolution_mult_pin_seven_zero
+
+/-- info: 'SocrateAI.ModularForms.frickeInvolution_mult_pin_five_neg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeInvolution_mult_pin_five_neg
+
+/-- info: 'SocrateAI.ModularForms.frickeInvolution_mult_pin_wrong_dir' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeInvolution_mult_pin_wrong_dir
+
+end Frk1x
+
+/-! ## Run 10 — `FRK-11` PROVED, and the `FRK-19`…`FRK-27` block that it unblocks
+
+THE FORMER TRIPWIRE IS GONE ON PURPOSE.  Until run 10 this file carried
+`#print axioms frickeInvolution_sq` asserting `sorryAx`, precisely so that proving FRK-11 would
+break the build and force this text to be rewritten.  It did.  The guard immediately below is its
+replacement and asserts the opposite: no `sorryAx`.
+
+WHAT FRK-11 SAYS, stated so it is not read as more than it is.
+`frickeInvolution_sq hN m f : frickeInvolution hN m (frickeInvolution hN m f) = f`, where
+`f : ModularForm (Gamma0GL N) (2*m)` is a HYPOTHESIS on Mathlib's bundled type.  Nothing in it
+asserts that any particular function — an eta quotient or anything else — belongs to that type.
+No Ligozat, no `ETA-01`, no `N ∈ {1,2,3,4,5,7,13}` restriction enters FRK-11 at all.  It is the
+Atkin–Lehner involution on whatever the module happens to contain, at every level `N > 0` and
+every even weight `2*m`, `m : ℤ` (negative `m` and `m = 0` included).
+
+THE PROOF'S ONE NON-MECHANICAL STEP, and why FRK-42…FRK-46 exist.  Pushing the normalising scalar
+past the outer slash goes through Mathlib's `ModularForm.smul_slash`, whose statement carries
+`σ A c`, and `σ` is defined by a literal `if 0 < A.det.val then .refl else Complex.conjCAE`.  At
+`A = W_N` the determinant is `+N > 0` (FRK-12, pinned at four literal levels by FRK-28…FRK-31), so
+the identity branch is the right one and `frickeW_sigma_apply` (FRK-47) resolves it.  But
+FRK-11's own multiplier `N^(1-m)` is REAL, and the two branches agree on reals: a wrong branch
+would have been mathematically invisible here.  FRK-42/FRK-43 therefore evaluate `σ (W_N)` at the
+NON-REAL scalars `I` and `1 + 2I`, and FRK-44/FRK-45/FRK-46 evaluate the branch NOT taken and
+prove it lands somewhere else (`conj I = -I ≠ I`, `conj (1+2I) = 1-2I ≠ 1+2I`), so the resolution
+is refuted-if-wrong rather than merely unchecked.
+
+NON-VACUITY, exhibited rather than asserted.  An involution on a zero module, and an eigenspace
+decomposition of one, are worthless.  Two guards below settle that this one is not:
+`modularForm_odd_weight_subsingleton` (FRK-24c) proves the ODD-weight module IS a singleton — so
+the odd case really is vacuous, and this library says so instead of quietly indexing it away —
+while `frickePlus_ne_frickeMinus` (FRK-27c) proves that at weight `0` and EVERY level `N > 0` the
+`+1` and `-1` eigenspaces are DIFFERENT submodules, witnessed by `ModularForm.const 1`.
+
+THE HONEST LIMIT OF THAT WITNESS.  It exhibits an element of `frickePlus` that is not in
+`frickeMinus`.  It does NOT exhibit a nonzero element of `frickeMinus`, at this or any level, and
+no such element exists anywhere in this library.  A `-1`-eigenform of the Fricke involution
+remains the next obstruction, and the only route offered to one (`SDF-20`) is still `sorry`. -/
+
+section Frk11
+
+/-- info: 'SocrateAI.ModularForms.frickeW_sigma_pin_two_I' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_sigma_pin_two_I
+
+/-- info: 'SocrateAI.ModularForms.frickeW_sigma_pin_thirteen' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_sigma_pin_thirteen
+
+/-- info: 'SocrateAI.ModularForms.frickeW_sigma_pin_conj_I' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_sigma_pin_conj_I
+
+/-- info: 'SocrateAI.ModularForms.frickeW_sigma_pin_I_ne_neg_I' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_sigma_pin_I_ne_neg_I
+
+/-- info: 'SocrateAI.ModularForms.frickeW_sigma_pin_conj_thirteen' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_sigma_pin_conj_thirteen
+
+/-- info: 'SocrateAI.ModularForms.frickeW_sigma_apply' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeW_sigma_apply
+
+/-- info: 'SocrateAI.ModularForms.frickeInvolution_apply' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeInvolution_apply
+
+/-! **FRK-11 — THE NODE.** -/
+/-- info: 'SocrateAI.ModularForms.frickeInvolution_sq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeInvolution_sq
+
+/-! **FRK-48 — the STATEMENT PIN: FRK-11's normalisation IS the classical Atkin-Lehner one.**
+`frickeInvolution hN m f τ = N^(-m) · τ^(-2m) · f (W_N • τ)`, and FRK-14 rewrites `W_N • τ` to
+`-(1/(N τ))`, so the right-hand side is literally `N^(-k/2) τ^(-k) f(-1/(N τ))` at `k = 2m`.
+Without this, the guards above would certify an involution under an unspecified normalisation. -/
+/-- info: 'SocrateAI.ModularForms.frickeInvolution_apply_classical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeInvolution_apply_classical
+
+/-- info: 'SocrateAI.ModularForms.frickeModularOperator_add' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeModularOperator_add
+
+/-- info: 'SocrateAI.ModularForms.frickeModularOperator_smul' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeModularOperator_smul
+
+/-- info: 'SocrateAI.ModularForms.frickeModularOperator_smul_pin_I' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeModularOperator_smul_pin_I
+
+/-- info: 'SocrateAI.ModularForms.frickeInvolutionLM' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeInvolutionLM
+
+/-- info: 'SocrateAI.ModularForms.frickeInvolutionLM_apply' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeInvolutionLM_apply
+
+/-- info: 'SocrateAI.ModularForms.frickeInvolutionLM_sq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeInvolutionLM_sq
+
+/-- info: 'SocrateAI.ModularForms.frickePlus' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickePlus
+
+/-- info: 'SocrateAI.ModularForms.frickeMinus' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeMinus
+
+/-- info: 'SocrateAI.ModularForms.frickePlus_mem_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickePlus_mem_iff
+
+/-- info: 'SocrateAI.ModularForms.frickeMinus_mem_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeMinus_mem_iff
+
+/-! **FRK-22c — the packaging conjunction.**  This is the node's resolving `lean_name`: one
+declaration whose axiom set covers BOTH halves of FRK-22, so `check_dag`'s single-`lean_name`
+base-name rule verifies the whole node instead of only the `+1` half. -/
+/-- info: 'SocrateAI.ModularForms.frickeEigenspace_mem_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeEigenspace_mem_iff
+
+/-! **FRK-50 — the eigenspaces in CLASSICAL Atkin–Lehner form.**  FRK-22 composed with FRK-48:
+membership is exactly `N^(-k/2) τ^(-k) f(W_N • τ) = ± f τ` at `k = 2 * m`.  Without these, calling
+`frickePlus` / `frickeMinus` "the Atkin–Lehner eigenspaces" is an unpinned claim about an operator
+normalised by Mathlib's GL-slash rather than by the classical `N^(-k/2)`. -/
+/-- info: 'SocrateAI.ModularForms.frickePlus_mem_iff_classical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickePlus_mem_iff_classical
+
+/-- info: 'SocrateAI.ModularForms.frickeMinus_mem_iff_classical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeMinus_mem_iff_classical
+
+/-! **FRK-23a — the decomposition.** -/
+/-- info: 'SocrateAI.ModularForms.fricke_decomposition' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.fricke_decomposition
+
+/-! **FRK-23b — the sharp `IsCompl` form.**  STRICTLY STRONGER than FRK-23a; do not report one as
+the other. -/
+/-- info: 'SocrateAI.ModularForms.fricke_isCompl' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.fricke_isCompl
+
+/-! **FRK-24 PINs V1…V7 — the decide-pins on the VACUITY MECHANISM**, guarded BEFORE the
+general lemma's own guards.  V7 is the negative control: at even weight the same computation
+gives `+1`, so odd-weight vanishing is not an artifact of the argument. -/
+/-! **FRK-24 PIN V1** — lower-left entry of `(-1 : SL(2,ℤ))` is `0`, by `decide`. -/
+/-- info: 'SocrateAI.ModularForms.oddWeight_pin_neg_one_entry' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.oddWeight_pin_neg_one_entry
+
+/-! **FRK-24 PIN V2** — `-1 ∈ Gamma0GL 12`, re-proved WITHOUT `neg_one_mem_Gamma0GL`. -/
+/-- info: 'SocrateAI.ModularForms.oddWeight_pin_mem_twelve' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.oddWeight_pin_mem_twelve
+
+/-! **FRK-24 PIN V3** — `-1 ∈ Gamma0GL 0`, the degenerate level, also independent. -/
+/-- info: 'SocrateAI.ModularForms.oddWeight_pin_mem_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.oddWeight_pin_mem_zero
+
+/-! **FRK-24 PIN V4** — `denom (-1) z = -1`, the factor raised to `-k`. -/
+/-- info: 'SocrateAI.ModularForms.oddWeight_pin_denom_neg_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.oddWeight_pin_denom_neg_one
+
+/-! **FRK-24 PIN V5** — `(-1)^3 = -1` (odd `k`). -/
+/-- info: 'SocrateAI.ModularForms.oddWeight_pin_sign_three' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.oddWeight_pin_sign_three
+
+/-! **FRK-24 PIN V6** — `(-1)^(-5) = -1` (odd AND negative `k`; `zpow`, not `pow`). -/
+/-- info: 'SocrateAI.ModularForms.oddWeight_pin_sign_neg_five' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.oddWeight_pin_sign_neg_five
+
+/-! **FRK-24 PIN V7 — NEGATIVE CONTROL** — `(-1)^4 = +1 ≠ -1`, so the vanishing is genuinely an odd-weight phenomenon. -/
+/-- info: 'SocrateAI.ModularForms.oddWeight_pin_sign_even_control' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.oddWeight_pin_sign_even_control
+
+/-- info: 'SocrateAI.ModularForms.neg_one_mem_Gamma0GL' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.neg_one_mem_Gamma0GL
+
+/-- info: 'SocrateAI.ModularForms.modularForm_odd_weight_eq_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.modularForm_odd_weight_eq_zero
+
+/-! **FRK-24c — THE ODD-WEIGHT VACUITY, checked and not assumed.** -/
+/-- info: 'SocrateAI.ModularForms.modularForm_odd_weight_subsingleton' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.modularForm_odd_weight_subsingleton
+
+/-! **FRK-24 PINs V8/V9 — INSTANCE pins on the general theorem at literal `(N, k)`.** -/
+/-! **FRK-24 PIN V8** — instance at `N = 12`, `k = 3`. -/
+/-- info: 'SocrateAI.ModularForms.oddWeight_pin_instance_twelve_three' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.oddWeight_pin_instance_twelve_three
+
+/-! **FRK-24 PIN V9** — instance at `N = 1`, `k = -7`. -/
+/-- info: 'SocrateAI.ModularForms.oddWeight_pin_instance_one_neg_seven' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.oddWeight_pin_instance_one_neg_seven
+
+
+/-! **FRK-60 … FRK-64** — the five CONSTANT decide-pins for FRK-25, guarded.  They evaluate the
+BUNDLED operator on `const 1` at literal `N` and literal `τ`, and none of their proofs calls
+`frickeModularOperator_const_one`. -/
+/-! **C1** `N = 2`, `τ = i`: `1/2`. -/
+/-- info: 'SocrateAI.ModularForms.frickeModularOperator_const_pin_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeModularOperator_const_pin_two
+
+/-! **C2** `N = 3`, `τ = 2i`: `1/3`. -/
+/-- info: 'SocrateAI.ModularForms.frickeModularOperator_const_pin_three' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeModularOperator_const_pin_three
+
+/-! **C3** `N = 7`, `τ = i`: `1/7`. -/
+/-- info: 'SocrateAI.ModularForms.frickeModularOperator_const_pin_seven' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeModularOperator_const_pin_seven
+
+/-! **C4** `N = 1`, the degenerate level: `1`. -/
+/-- info: 'SocrateAI.ModularForms.frickeModularOperator_const_pin_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeModularOperator_const_pin_one
+
+/-! **C5 — NEGATIVE CONTROL** `N = 5`: the RAW operator does NOT fix `const 1`, so the
+`N⁻¹` is a Mathlib-slash artifact and not the classical Atkin-Lehner constant. -/
+/-- info: 'SocrateAI.ModularForms.frickeModularOperator_const_not_fixed_five' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeModularOperator_const_not_fixed_five
+
+/-- info: 'SocrateAI.ModularForms.frickeModularOperator_const_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeModularOperator_const_one
+
+/-- info: 'SocrateAI.ModularForms.const_one_ne_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.const_one_ne_zero
+
+/-- info: 'SocrateAI.ModularForms.frickeInvolution_const_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeInvolution_const_one
+
+/-- info: 'SocrateAI.ModularForms.const_one_mem_frickePlus' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.const_one_mem_frickePlus
+
+/-- info: 'SocrateAI.ModularForms.const_one_not_mem_frickeMinus' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.const_one_not_mem_frickeMinus
+
+/-! **FRK-65 (RECONCILIATION INSTANCE PIN C6)** `N = 12`: the NORMALISED involution does fix
+`const 1` at a literal composite level.  Contrast FRK-64. -/
+/-- info: 'SocrateAI.ModularForms.frickeInvolution_const_one_pin_twelve' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeInvolution_const_one_pin_twelve
+
+/-! **FRK-27c — THE NON-VACUITY WITNESS.** -/
+/-- info: 'SocrateAI.ModularForms.frickePlus_ne_frickeMinus' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickePlus_ne_frickeMinus
+
+/-! **FRK-66** the `+1` eigenspace in weight `0` is not `⊥`, at every level.  Says NOTHING about
+`frickeMinus hN 0`, which is still neither proved `⊥` nor proved nonzero. -/
+/-- info: 'SocrateAI.ModularForms.frickePlus_ne_bot' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickePlus_ne_bot
+
+/-! ## SDF-17 — the eta-quotient lift, FUNCTION LEVEL, proved sorry-free in run 11
+
+WHAT THE FOUR SDF-17 DECLARATIONS DO AND DO NOT SAY.  Not one of them mentions `ModularForm`.
+`etaQuotientH_frickeW_smul` and `etaQuotientH_slash_frickeW_selfDual` are statements about the
+FUNCTION `etaQuotientH N r : ℍ → ℂ`; `slash_frickeW_of_eigen` is about an arbitrary `f : ℍ → ℂ`;
+`frickeEigenvalue_normalised_even` is an identity in `ℂ`.  Nothing here asserts, or can be quoted
+as asserting, that an eta quotient IS a modular form at any level.  The declarations that DO take
+modularity — SDF-18/19/20 — are still `sorry` and carry the tripwire at the end of this section.
+
+THE EIGEN-SLASH PINS COME FIRST, as they do in the source file: SDF-17b's whole content is the
+constant `λ / N`, and these are what forbid an `N` where the `N⁻¹` belongs.  Each `_hyp` lemma
+discharges SDF-17b's hypothesis for a literal eigenfunction; each value lemma evaluates the slash
+at a literal `τ` from `slash_apply` alone.  The two `_wrong_direction` lemmas REFUTE the mirror
+constant `N · λ` rather than leaving it merely unproved. -/
+
+/-! **SDF-21 (EIGEN-SLASH PIN E1)** `f ≡ 1`, `N = 2`, `k = 0`, `lam = 1`; value `1/2`. -/
+/-- info: 'SocrateAI.ModularForms.slash_eigen_pin_const_hyp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.slash_eigen_pin_const_hyp
+
+/-- info: 'SocrateAI.ModularForms.slash_eigen_pin_const' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.slash_eigen_pin_const
+
+/-! **SDF-24 (NEGATIVE CONTROL A)** the constant `N · lam = 2` is FALSE at E1's instance. -/
+/-- info: 'SocrateAI.ModularForms.slash_eigen_pin_const_wrong_direction' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.slash_eigen_pin_const_wrong_direction
+
+/-! **SDF-22 (EIGEN-SLASH PIN E2)** `f = τ ↦ τ`, `N = 3`, `k = -2`, `lam = -1/3`; value `-i/9`.
+NEGATIVE weight, non-constant `f`, non-real value. -/
+/-- info: 'SocrateAI.ModularForms.slash_eigen_pin_id_hyp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.slash_eigen_pin_id_hyp
+
+/-- info: 'SocrateAI.ModularForms.slash_eigen_pin_id' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.slash_eigen_pin_id
+
+/-! **SDF-23 (EIGEN-SLASH PIN E3)** `f = τ ↦ τ⁻¹`, `N = 2`, `k = 2`, `lam = -2`; value `i`.
+POSITIVE weight and `|lam| > 1`, so the `N⁻¹` divides something other than `1`. -/
+/-- info: 'SocrateAI.ModularForms.slash_eigen_pin_inv_hyp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.slash_eigen_pin_inv_hyp
+
+/-- info: 'SocrateAI.ModularForms.slash_eigen_pin_inv' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.slash_eigen_pin_inv
+
+/-! **SDF-24 (NEGATIVE CONTROL B)** `N · lam = -4` would give `4i`; the value is `i`. -/
+/-- info: 'SocrateAI.ModularForms.slash_eigen_pin_inv_wrong_direction' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.slash_eigen_pin_inv_wrong_direction
+
+/-! **SDF-17a** run 6's SDF-05 with the argument written as `W_N • τ`.  Function level. -/
+/-- info: 'SocrateAI.ModularForms.etaQuotientH_frickeW_smul' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaQuotientH_frickeW_smul
+
+/-! **SDF-17b — THE CONSTANT RECONCILIATION.**  The SLASH eigenvalue is `λ / N`, not `λ`. -/
+/-- info: 'SocrateAI.ModularForms.slash_frickeW_of_eigen' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.slash_frickeW_of_eigen
+
+/-! **SDF-17c** the self-dual eta quotient is an eigenvector OF THE SLASH.  Still a statement
+about the function `etaQuotientH N r`; no modularity is claimed or used. -/
+/-- info: 'SocrateAI.ModularForms.etaQuotientH_slash_frickeW_selfDual' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaQuotientH_slash_frickeW_selfDual
+
+/-! **SDF-17d** after the `N^(1-m)` normalisation the eigenvalue at weight `2m` is `(-1)^m`. -/
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_normalised_even' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeEigenvalue_normalised_even
+
+/-! ### SDF-18 — run 13.  THE TRIPWIRE FIRED AND HAS BEEN MOVED.
+
+In run 11 the tripwire below asserted that `frickeInvolution_eq_of_etaQuotient` depends on
+`sorryAx`, precisely so that proving it would FAIL THE BUILD and force this block to be rewritten.
+Run 13 proved it, the guard fired as designed, and it is replaced here by eight positive guards.
+
+READ WHAT THESE GUARDS DO AND DO NOT CERTIFY (LL-33).  They certify that SDF-18 and its two
+corollaries are `sorry`-free.  They do NOT certify that any eta quotient is a modular form:
+`frickeInvolution_eq_of_etaQuotient` TAKES `f : ModularForm (Gamma0GL N) (2*m)` and
+`hf : ∀ τ, f τ = etaQuotientH N r τ` as HYPOTHESES.  Nothing in this library discharges those
+hypotheses for a nontrivial exponent vector at any `N`, so SDF-18 has no instance today.  The
+tripwire has been MOVED, not deleted: it now sits on `frickeInvolution_etaQuotientModularForm`
+(SDF-19), the first of the two declarations that are still `sorry`. -/
+
+/-! **SDF-18 PIN 1 — the level-11 minus pin.**  `frickeEigenvalue 11 2 = -11`, normalised to `-1`,
+and the `(-1)^(2m)` spelling is REFUTED at this instance. -/
+/-- info: 'SocrateAI.ModularForms.sdf18_pin_level_eleven' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf18_pin_level_eleven
+
+/-! **SDF-18 PIN 2 — `N = 2`, `m = 3`.**  Second minus-side instance, `i^(-6) = -1`. -/
+/-- info: 'SocrateAI.ModularForms.sdf18_pin_level_two_weight_six' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf18_pin_level_two_weight_six
+
+/-! **SDF-18 PIN 3 — `N = 4`, `m = 4`.**  Plus-side instance; dropping the `N^(1-m)`
+normalisation is REFUTED here (unnormalised it is `64`, not `1`). -/
+/-- info: 'SocrateAI.ModularForms.sdf18_pin_level_four_weight_eight' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf18_pin_level_four_weight_eight
+
+/-! **SDF-18 PIN 4 — negative weight, `N = 3`, `m = -2`.**  Radicand `1/81`. -/
+/-- info: 'SocrateAI.ModularForms.sdf18_pin_level_three_weight_neg_four' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf18_pin_level_three_weight_neg_four
+
+/-! **SDF-18a** — the conditional lift.  `frickeInvolution hN m f = (-1)^m • f`, on the HYPOTHESIS
+that `f` is a modular form agreeing pointwise with the self-dual eta quotient. -/
+/-- info: 'SocrateAI.ModularForms.frickeInvolution_eq_of_etaQuotient' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeInvolution_eq_of_etaQuotient
+
+/-! **SDF-18b** — `m` even ⇒ `+1` eigenform. -/
+/-- info: 'SocrateAI.ModularForms.mem_frickePlus_of_etaQuotient' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.mem_frickePlus_of_etaQuotient
+
+/-! **SDF-18c** — `m` odd ⇒ `-1` eigenform.  Its one instance in this library is SDF-19b below,
+which builds `f` from `etaQuotientModularForm` at `N = 4` and is CONDITIONAL on `hbd`; no
+UNCONDITIONAL nonzero `-1`-Fricke-eigenform is exhibited anywhere. -/
+/-- info: 'SocrateAI.ModularForms.mem_frickeMinus_of_etaQuotient' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.mem_frickeMinus_of_etaQuotient
+
+/-! **SDF-18d** — the packaging conjunction that the DAG node resolves to, so that all three
+declarations are covered by a single `lean_name` base-name match. -/
+/-- info: 'SocrateAI.ModularForms.frickeEigen_of_etaQuotient' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeEigen_of_etaQuotient
+
+/-! **SDF-18e** — every ARITHMETIC hypothesis of SDF-18c holds at `N = 11`, `r = (2,2)`, `m = 1`
+(`η(τ)²η(11τ)²`), decided.  The only undischarged hypothesis is the modular form `f` itself. -/
+/-- info: 'SocrateAI.ModularForms.sdf18_level_eleven_hypotheses' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf18_level_eleven_hypotheses
+
+/-! **SDF-18f** — SDF-18c specialised to that vector.  STILL CONDITIONAL: `f` is a hypothesis, and
+cusp boundedness at `N = 11` (`F3.1-OBSTRUCTED`) is what stands between this and a `-1`-eigenform. -/
+/-- info: 'SocrateAI.ModularForms.mem_frickeMinus_etaProductEleven' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.mem_frickeMinus_etaProductEleven
+
+/-! ### SDF-19 — the restricted lift at `N ≤ 4`, its `-1`-eigenspace witness, and its NINE pins
+
+THE PINS COME FIRST, and they are guarded first, because the whole node turns on the sign of one
+constant.  Four VALUE pins at `N = 4` and `k ∈ {2, 4, 6, 10}` recompute `frickeEigenvalue 4 k`
+from the definition and then apply the `N^(1-m)` normalisation; `k = 6` (`m = 3`) is the witness's
+own point, and the `k = 4` row is the PLUS side, so a proof that produced `+1` everywhere is
+refuted here.  Four DECIDE pins settle the witness vector's arithmetic hypotheses, and one further
+guard carries three NEGATIVE CONTROLS showing those `decide`s are not true of any vector at all.
+The `k = 6` pin itself carries two more negative controls: the `(-1)^(2m)` spelling and the
+unnormalised constant are both REFUTED. -/
+
+/-! **SDF-19 PIN 1** — `N = 4`, `m = 1`, `k = 2`: `λ = -4`, normalised `-1`. -/
+/-- info: 'SocrateAI.ModularForms.sdf19_pin_level_four_weight_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf19_pin_level_four_weight_two
+
+/-! **SDF-19 PIN 2** — `N = 4`, `m = 2`, `k = 4`: the PLUS-side row, `λ = 16`, normalised `+1`. -/
+/-- info: 'SocrateAI.ModularForms.sdf19_pin_level_four_weight_four' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf19_pin_level_four_weight_four
+
+/-! **SDF-19 PIN 3 — THE WITNESS PIN.**  `N = 4`, `m = 3`, `k = 6`: `λ = -64`, normalised `-1`.
+Two negative controls inside: `(-1)^(2m)` is refuted, and dropping `N^(1-m)` is refuted. -/
+/-- info: 'SocrateAI.ModularForms.sdf19_pin_level_four_weight_six' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf19_pin_level_four_weight_six
+
+/-! **SDF-19 PIN 4** — `N = 4`, `m = 5`, `k = 10`: `λ = -1024`, normalised `-1`. -/
+/-- info: 'SocrateAI.ModularForms.sdf19_pin_level_four_weight_ten' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf19_pin_level_four_weight_ten
+
+/-! **SDF-19 PIN 5** — the exponent sum of `rMinusWitness`, decided at the spelling `2 * (2 * 3)`. -/
+/-- info: 'SocrateAI.ModularForms.sdf19_pin_witness_sum' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf19_pin_witness_sum
+
+/-! **SDF-19 PIN 6** — Fricke self-duality of `rMinusWitness` at `N = 4`. -/
+/-- info: 'SocrateAI.ModularForms.sdf19_pin_witness_selfDual' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf19_pin_witness_selfDual
+
+/-! **SDF-19 PIN 7** — Ligozat congruence (i) for `rMinusWitness`. -/
+/-- info: 'SocrateAI.ModularForms.sdf19_pin_witness_congr1' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf19_pin_witness_congr1
+
+/-! **SDF-19 PIN 8** — Ligozat congruence (ii) for `rMinusWitness`. -/
+/-- info: 'SocrateAI.ModularForms.sdf19_pin_witness_congr2' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf19_pin_witness_congr2
+
+/-! **SDF-19 PIN 9 — THE COMBINATORIAL NEGATIVE CONTROLS.**  Moving the exponent to `δ = 1` breaks
+self-duality; the exponent `11` breaks congruence (i); the sum is not `2 * (2 * 2)`. -/
+/-- info: 'SocrateAI.ModularForms.sdf19_pin_witness_neg_controls' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf19_pin_witness_neg_controls
+
+/-! **SDF-19a** — THE TRIPWIRE ON THIS NAME FIRED AS DESIGNED and has been replaced by the positive
+guard below.  In run 13 this line asserted that `frickeInvolution_etaQuotientModularForm` depends on
+`sorryAx`; run 14 proved it, the build failed exactly as intended, and the bookkeeping was redone.
+
+WHAT THE POSITIVE GUARD DOES AND DOES NOT SAY.  It says the restricted lift at `0 < N ≤ 4` is
+sorry-free.  It does NOT say that any eta quotient is unconditionally a modular form: the caller
+still supplies `hbd`, Ligozat's condition (iii), which this library discharges for no nontrivial
+exponent vector at any level.  Nothing here weakens the LL-33 discipline. -/
+/-- info: 'SocrateAI.ModularForms.frickeInvolution_etaQuotientModularForm' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeInvolution_etaQuotientModularForm
+
+/-! **SDF-19b** — the `-1`-eigenspace witness at `N = 4`, `m = 3` (`η(2τ)^12`).  CONDITIONAL ON
+`hbd` AND SAID SO: cusp boundedness is `F3.1-OBSTRUCTED` here as everywhere.  It is however
+classically TRUE at this vector, so the statement is conditional, not vacuous.  The `+1` witness
+still lives at `m = 0`, so no single `(N, m)` has both eigenspaces witnessed. -/
+/-- info: 'SocrateAI.ModularForms.frickeMinus_ne_bot_level_four' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeMinus_ne_bot_level_four
+
+/-! **SDF-19c** — the packaging conjunction the DAG node resolves to, so that a single `lean_name`
+base-name match covers both SDF-19 theorems. -/
+/-- info: 'SocrateAI.ModularForms.sdf19_frickeEigen_etaQuotientModularForm' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf19_frickeEigen_etaQuotientModularForm
+
+/-! TRIPWIRE HISTORY. It sat on `frickeInvolution_etaQuotientModularForm` (SDF-19) while SDF-19
+was open, fired exactly as designed when SDF-19 was proved, and was replaced by the twelve
+positive guards above. It then sat on `frickeMinus_ne_bot_of_etaQuotient` (SDF-20) while THAT was
+open; SDF-20 is now also proved (the argument the `-- OPEN:` comment there had already spelled
+out: `mem_frickeMinus_of_etaQuotient` puts the hypothesised `f` in the submodule,
+`Submodule.ne_bot_iff` with `hf0` finishes), so this guard is now an ordinary positive one, not a
+tripwire. No node in this block remains `sorry`. This theorem is still CONDITIONAL on `f` and
+`f ≠ 0` as hypotheses — nothing here or elsewhere in this library exhibits an unconditional
+nonzero `-1`-Fricke-eigenform at any level; that remains F3.1-OBSTRUCTED (Ligozat condition
+(iii)/cusp-boundedness, undischarged for every nontrivial exponent vector at every level). -/
+/-- info: 'SocrateAI.ModularForms.frickeMinus_ne_bot_of_etaQuotient' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.frickeMinus_ne_bot_of_etaQuotient
+
+/-! ## SDF-25 — THE PIN BATTERY, guarded pin by pin  (run 15)
+
+WHY THIS BLOCK EXISTS AND WHAT IT DOES NOT CLAIM.  The SDF-25 node enumerates five groups of
+pins.  Three of them (`iv`, the witness `decide`s, and `v`, the non-real `σ` branch) were already
+landed and already guarded — `sdf19_pin_witness_*` above, `frickeW_sigma_pin_two_I` and
+`frickeModularOperator_smul_pin_I` earlier in this file — so they are NOT re-proved here.  What
+run 15 adds, and what the twelve guards below cover, is:
+
+* groups (i) and (ii) at the four `(N,k)` / `(N,m)` literals the node itself names, which no
+  earlier pin used, each TWO-SIDED against an explicit numeral and two of them carrying a `≠`
+  refutation conjunct;
+* group (iii) stated ON `frickeEigenvalue` rather than on a numeral surrogate, at the four
+  instances other than `(4,3)` — and hence, for the first time, at levels `N ∈ {1, 6, 9}` rather
+  than at `N = 4` alone.
+
+NOTHING IN THIS BATTERY ASSERTS MODULARITY.  Every conjunct is either numeral arithmetic or a
+`decide` about `IsFrickeSelfDual` / `LigozatCongr1` / `LigozatCongr2`.  Ligozat's condition (iii)
+(cusp boundedness) is `F3.1-OBSTRUCTED` and appears nowhere here; no statement in this block says
+that `η(2τ)^12` is a modular form. -/
+
+/-- info: 'SocrateAI.ModularForms.sdf25_pin_const_four_six' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf25_pin_const_four_six
+
+/-- info: 'SocrateAI.ModularForms.sdf25_pin_const_two_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf25_pin_const_two_two
+
+/-- info: 'SocrateAI.ModularForms.sdf25_pin_const_three_neg_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf25_pin_const_three_neg_two
+
+/-- info: 'SocrateAI.ModularForms.sdf25_pin_const_five_four' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf25_pin_const_five_four
+
+/-- info: 'SocrateAI.ModularForms.sdf25_pin_norm_four_three' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf25_pin_norm_four_three
+
+/-- info: 'SocrateAI.ModularForms.sdf25_pin_norm_two_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf25_pin_norm_two_one
+
+/-- info: 'SocrateAI.ModularForms.sdf25_pin_norm_three_neg_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf25_pin_norm_three_neg_one
+
+/-- info: 'SocrateAI.ModularForms.sdf25_pin_norm_five_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf25_pin_norm_five_two
+
+/-- info: 'SocrateAI.ModularForms.sdf25_pin_bridge_one_six' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf25_pin_bridge_one_six
+
+/-- info: 'SocrateAI.ModularForms.sdf25_pin_bridge_nine_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf25_pin_bridge_nine_two
+
+/-- info: 'SocrateAI.ModularForms.sdf25_pin_bridge_four_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf25_pin_bridge_four_zero
+
+/-- info: 'SocrateAI.ModularForms.sdf25_pin_bridge_six_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf25_pin_bridge_six_one
+
+/-! **SDF-25 packaging** — the single declaration the DAG node's `lean_name` points at.  Its
+statement touches all five groups, so a `sorry` anywhere in the battery surfaces here. -/
+/-- info: 'SocrateAI.ModularForms.sdf25_pin_battery' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.sdf25_pin_battery
+
+end Frk11

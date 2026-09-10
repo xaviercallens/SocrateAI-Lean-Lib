@@ -19,6 +19,8 @@ import Tests.TestInflation
 import Tests.TestCosmology
 import Tests.TestChameleonGravity
 import Tests.TestAlienMath
-import Tests.TestExtremalEta
+-- Tests.TestExtremalEta removed 2026-09-10: its module was quarantined (level-12 claim false,
+-- see Lean/SocrateAI/Quarantine/ExtremalLevel12Refuted.lean); the moved test now lives at
+-- Lean/SocrateAI/Quarantine/TestExtremalLevel12Refuted.lean and is deliberately not imported here.
 import Tests.TestPoincare
 import Tests.TestTierCalculus
