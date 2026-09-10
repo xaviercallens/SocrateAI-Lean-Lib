@@ -2241,8 +2241,8 @@ theorem etaQuotient_fricke {N : ℕ} (hN : 0 < N) (r : EtaExp) {k : ℤ}
 /-- **LL-1 EXTERNAL GUARD, run in the STRONG direction.**  At `N = 1`, `r ≡ 24`, `k = 12` the
 eta quotient is `η` itself, `s = 1`, `N^k = 1` and `i^{-12} = 1`, so `etaQuotient_fricke` says
 `η(-1/z)²⁴ = z¹² η(z)²⁴` — which is MATHLIB's `discriminant_S_invariant`, reproved here through
-our constant.  A wrong sign on `i^{-k}`, a wrong power of `N`, or a `√s` on the wrong side of
-the fraction all fail here. -/
+our constant.  SECOND-ROUTE AGREEMENT ONLY: it pins NO component of the constant — `i^{-12} =
+i^{+12}`, `1^k = 1` for every `k`, `s = 1`.  `selfDual_pin_level_one_no_evidence_*` proves this. -/
 theorem eta_S_via_fricke {z : ℂ} (hz : z ∈ ℍₒ) :
     ModularForm.eta (-(1 / z)) ^ (24 : ℕ) = z ^ (12 : ℕ) * ModularForm.eta z ^ (24 : ℕ) := by
   have h := etaQuotient_fricke (N := 1) one_pos (fun _ => (24 : ℤ)) (k := 12) (by simp) hz

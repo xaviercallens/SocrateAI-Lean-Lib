@@ -110,6 +110,13 @@ import SocrateAI.ModularForms.EtaQuotientPrimeLevel
 -- F3.1-OBSTRUCTED record (why the other cusps are out of reach).
 import SocrateAI.ModularForms.EtaQuotientCuspOrder
 
+-- Run 6 (SDF-*): the Fricke-SELF-DUAL specialisation of `etaQuotient_fricke` — when
+-- `r δ = r (N/δ)` the Fricke transform returns the SAME eta quotient, so the transformation law
+-- becomes an eigenform relation with eigenvalue `i^{-k}·N^{k/2}`.  STATEMENT LAYER ONLY: every
+-- declaration is `sorry`.  Named "self-dual", never "balanced" (that word is taken by the
+-- unrelated `exists_balanced_add`); see the file header.
+import SocrateAI.ModularForms.EtaQuotientFrickeSelfDual
+
 -- Run 4 (DRK-*): Dedekind sums, Apostol's Φ / Rademacher's Ψ, and the η multiplier system.
 -- DedekindSum + RademacherPhi carry the DRK-00 sign-discipline gate and are import-light on
 -- purpose (no η, no ℍ); EtaMultiplier is where the analysis enters and is entirely `sorry`.

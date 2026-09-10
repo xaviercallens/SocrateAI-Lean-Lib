@@ -59,6 +59,11 @@ import Mathlib.NumberTheory.ModularForms.DedekindEta
 -- TDUAL-M0 sign-discipline pins, and the INVERTED tripwires certifying that TDUAL-M1 and TDUAL-01
 -- are still UNPROVED, all fail the build if they drift.
 import SocrateAI.StringTheory.TDualityBridge
+-- Run 11 (SDF-*).  Importing this HERE makes the SDF axiom audit a build dependency: the six
+-- `SDF-DEF-01` condition pins, the non-constancy witness and the negative control all fail the
+-- build if their footprints drift.  It also puts the still-`sorry` SDF-01 … SDF-13 statements in
+-- FinalCheck's cone, which is what the INVERTED tripwires at the end of section `SdfDef01` pin.
+import SocrateAI.ModularForms.EtaQuotientFrickeSelfDual
 
 open SocrateAI.ModularForms
 
@@ -1575,8 +1580,8 @@ end F32A6Pins
 -- `r ≡ 24`, `k = 12`, where `s = 1`, `N^k = 1`, `i^{-12} = 1` and the identity collapses to
 -- `η(-1/z)^24 = z^12 η(z)^24` -- MATHLIB's `discriminant_S_invariant`.  PIN 4 below then RE-DERIVES
 -- that same statement from Mathlib's theorem, so two independent derivations of one identity have
--- to agree; a sign error in `i^{-k}`, a wrong power of `N`, or `√s` on the wrong side of the
--- fraction breaks the agreement.  `fricke_level_two_pin` is the hand-checked `η(z)η(2z)` case at
+-- to agree.  SECOND-ROUTE AGREEMENT ONLY, though: at `N = 1`, `k = 12` it pins NO component of
+-- the constant.  `fricke_level_two_pin` is the hand-checked `η(z)η(2z)` case at
 -- `N = 2`, where the exponent vector is its own dual, so it pins the CONSTANT alone.
 -- `fricke_dual_pin` is the converse check: at `N = 2`, `r = (2,0)` the dual `(0,2)` is a
 -- DIFFERENT exponent vector, so a version of this node that forgot to reverse the exponents
@@ -1680,8 +1685,8 @@ example : ∀ (t : Finset ℕ) (a : ℕ → ℝ), (∀ δ ∈ t, 0 < a δ) → �
 -- PIN 4 -- THE MATHLIB CROSS-CHECK, RUN IN THE STRONG DIRECTION.  At `N = 1`, `r ≡ 24`, `k = 12`
 -- the eta quotient IS `η`, so this node asserts `η(-1/z)^24 = z^12 η(z)^24`, and that is exactly
 -- MATHLIB's `discriminant_S_invariant` -- `Δ` slashed by weight `12` at `S` is `Δ` -- which is
--- REPROVED here from `etaQuotient_fricke` and nothing else.  A wrong sign on `i^{-k}`, a wrong
--- power of `N`, or `√s` on the wrong side of the fraction dies here.
+-- REPROVED here from `etaQuotient_fricke` and nothing else.  SECOND-ROUTE AGREEMENT ONLY: at
+-- `N = 1`, `k = 12` it pins NO component of the constant (`selfDual_pin_level_one_no_evidence_*`).
 example : (ModularForm.discriminant ∣[(12 : ℤ)] ModularGroup.S) = ModularForm.discriminant := by
   funext z
   have hzne : (z : ℂ) ≠ 0 := UpperHalfPlane.ne_zero z
@@ -5340,3 +5345,2929 @@ physical counterpart. -/
 #guard_msgs in #print axioms tduality_tau_fricke_bridge
 
 end Tdual0Pins
+
+
+/-! ### `SDF-DEF-01` — the Fricke-self-dual (Fricke-symmetric) condition on an exponent vector
+
+`IsFrickeSelfDual N r : Prop := ∀ δ ∈ N.divisors, r δ = r (N / δ)`
+(`SocrateAI/ModularForms/EtaQuotientFrickeSelfDual.lean`).  This is the condition under which the
+DUAL exponent vector `δ ↦ r (N / δ)` on the right-hand side of the already-proved
+`etaQuotient_fricke` (`EtaQuotientModularity.lean`, tag `F3.2-A7`) agrees with `r` on `N.divisors`.
+
+NAMING, and the reason it is worth a line here: this condition is **never** called `balanced` in
+this library.  That word is already taken, in `EtaQuotientModularity.lean`, by the unrelated
+`Int.bmod` lemma `exists_balanced_add` (`F3.2-B1`) — and it is *also* the term Persson–Volpato use
+for this same condition, so it collides twice.  `self-dual` / `Fricke-symmetric` throughout.
+
+The six condition pins below were computed OUTSIDE Lean first (exact integer arithmetic:
+`divisors 1 = [1]`, `divisors 2 = [1,2]`, `divisors 6 = [1,2,3,6]`, with each vector printed
+alongside its dual) and only then asserted.  `selfDual_cond_pin_level_six` is the load-bearing one
+— the only pin with `N > 1` AND a non-constant exponent vector (`rPinSix_nonconstant` is the
+machine-checked witness of the non-constancy), hence the only one a wrong `δ ↔ N/δ` pairing could
+fail.  `selfDual_cond_pin_level_one` and `selfDual_cond_pin_zero_exp` are degenerate by
+construction (at `N = 1` every `r` is self-dual; `r ≡ 0` is self-dual at every `N`) and are guarded
+as floors, not as evidence about the involution.
+
+All are discharged by `decide` (or `rfl` under the binder), so no `Lean.ofReduceBool` may appear
+below; `native_decide` is deliberately not used, matching `DedekindSum.lean`'s convention.
+
+TWO FOOTPRINTS THAT ARE NOT WHAT THEY LOOK LIKE, recorded because this gate caught both when they
+were first written the other way round.  `rPinSix_nonconstant` depends on NO axioms: it is an
+inequality of two integers and never touches `Finset`.  `selfDual_cond_pin_zero_exp` DOES carry
+`[propext, Classical.choice, Quot.sound]` even though its proof is `fun _ _ => rfl` — the axioms
+come from `Nat.divisors` in its STATEMENT, not from its proof.  `#print axioms` reports the
+footprint of the whole declaration, statement included; reading a clean footprint as evidence about
+a proof alone is the misreading these two lines exist to block.
+
+SCOPE: nothing in this section, or in `EtaQuotientFrickeSelfDual.lean`, formalises any physics.
+Persson–Volpato (arXiv:1504.07260) is cited in that file's module docstring as the ORIGIN of the
+question only, at the literature (L) tier; their CHL / axio-dilaton S-duality claim is NOT a Lean
+statement anywhere in this library and must never be reported as one. -/
+
+namespace SdfDef01
+
+open SocrateAI.ModularForms
+
+/-- info: 'SocrateAI.ModularForms.IsFrickeSelfDual' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms IsFrickeSelfDual
+
+/-- info: 'SocrateAI.ModularForms.selfDual_cond_pin_level_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_cond_pin_level_one
+
+/-- info: 'SocrateAI.ModularForms.selfDual_cond_pin_level_six' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_cond_pin_level_six
+
+/-- info: 'SocrateAI.ModularForms.rPinSix_nonconstant' does not depend on any axioms -/
+#guard_msgs in #print axioms rPinSix_nonconstant
+
+/-- info: 'SocrateAI.ModularForms.selfDual_cond_pin_zero_exp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_cond_pin_zero_exp
+
+/-- info: 'SocrateAI.ModularForms.selfDual_cond_pin_level_two_weight_one' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_cond_pin_level_two_weight_one
+
+/-- info: 'SocrateAI.ModularForms.selfDual_cond_pin_level_one_weight_two' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_cond_pin_level_one_weight_two
+
+/-! #### The negative control — `IsFrickeSelfDual` is a genuine restriction
+
+`r = (2, 0)` at `N = 2`: the vector reads `[2, 0]` on `[1, 2]` while its dual reads `[0, 2]`.  This
+is the SAME exponent vector as `fricke_dual_pin` (`EtaQuotientModularity.lean`, sorry-free), where
+`f(z) = η(z)²` and its Fricke dual `f*(z) = η(2z)²` are shown to be genuinely different functions.
+Without this guard, every `SDF-*` statement could be vacuous on a mis-stated predicate — one
+quantified over `δ ∈ ∅`, or one that had collapsed to `r δ = r δ`. -/
+
+/-- info: 'SocrateAI.ModularForms.not_selfDual_pin_asymmetric' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms not_selfDual_pin_asymmetric
+
+/-! #### The MIS-PAIRING control — the divisor involution is the right one
+
+`r = (1, 11, 1, 11)` on `(1, 2, 3, 6)` carries the SAME weight normalisation as
+`selfDual_cond_pin_level_six`'s vector (`∑ r δ = 24`) and IS invariant under the WRONG involution
+`1 ↔ 3`, `2 ↔ 6` — but not under `δ ↦ 6/δ`, under which it reads `[1, 11, 1, 11]` against a dual
+`[11, 1, 11, 1]`.  A definition that had transposed the divisor pairing would satisfy every
+positive pin above and would prove this statement's NEGATION, so this guard and
+`selfDual_cond_pin_level_six` bracket the pairing from both sides. -/
+
+/-- info: 'SocrateAI.ModularForms.not_selfDual_pin_mispaired' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms not_selfDual_pin_mispaired
+
+/-! #### RECEIPT: the two INVERTED TRIPWIRES that used to live here are GONE
+
+This slot held, in turn, an inverted tripwire asserting that `etaQuotient_fricke_selfDual_raw`
+depends on `sorryAx` and one asserting the same of `etaQuotient_fricke_selfDual`.  Each PASSED only
+while its node was open, so "the statement landed, the proof did not" was machine-checked rather
+than asserted.  BOTH HAVE NOW BEEN INVERTED BACK, each in the same commit that discharged its node:
+`SDF-04` one run earlier, `SDF-05` this run.  Their real guards live in sections `Sdf04` and `Sdf05`
+below, alongside those nodes' pins.
+
+This paragraph is the receipt, kept so the removals are visible rather than silent — a green build
+with a stale tripwire, or with a tripwire quietly deleted instead of inverted, is the LL-2 failure
+mode this file exists to prevent.  No `SDF-*` node carries an inverted tripwire any more: `SDF-07`
+onward are open and simply have no guards, which is the correct state for an open node.  `SDF-06`
+never held one: its statement was pinned and its proof landed in the same run, so there was no
+interval during which "the statement is here, the proof is not" needed asserting. -/
+
+end SdfDef01
+
+/-! ## `SDF-DEF-02` — the closed-form Fricke eigenvalue `λ = i^{-k} · N^{k/2}`
+
+`frickeEigenvalue N k := i^{-k} · √(N^k)` is the constant that `etaQuotient_fricke`'s
+`N^k · s^{-1/2}` collapses to once the exponent vector is Fricke-self-dual, `s = ∏_{δ ∣ N} δ^{r δ}`
+having been forced to `N^k` by `prod_zpow_selfDual` (`SDF-02`).  The exponent vector has
+disappeared: the eigenvalue depends only on the LEVEL and the WEIGHT.
+
+WHAT THE GUARDS BUY.  A definition cannot be false, so the axiom footprint of `frickeEigenvalue`
+itself certifies only that it elaborates.  The content is in the VALUE pins: six concrete
+`(N, k)` instances whose numbers were computed by hand before being written as Lean statements,
+and three negative controls.  Until this section existed, the only Lean statements asserting any
+value of `frickeEigenvalue` were the five `SDF-05` pins (`selfDual_pin_level_one` and friends),
+every one of which is still `sorry` — so the closed form had NO machine-checked evidence behind
+it at all, only the hand arithmetic in its docstring.  These guards are that evidence.
+
+WHY THE PINS ARE STATED ON THE EIGENVALUE ALONE.  No eta quotient, no exponent vector and no
+`IsFrickeSelfDual` hypothesis appears in any of them.  That keeps `SDF-DEF-02` independent of the
+still-open `SDF-05`: a pin that carried the eigenform relation as a conjunct would be `sorry` for
+reasons having nothing to do with the eigenvalue, which is exactly the situation this section
+replaces.  The cost is that these pins say nothing about whether the closed form IS the Fricke
+eigenvalue — that is `SDF-03` (`fricke_const_selfDual`, closed, guarded below) plus `SDF-05`
+(still open), and must not be read off this section.
+
+THE REGIMES COVERED, and why each is needed:
+* `N = 1`, `k = 12` → `1`.  The instance underlying the sorry-free `eta_S_via_fricke`
+  (`EtaQuotientModularity.lean:2246`), where `η(-1/z)²⁴ = z¹² η(z)²⁴` carries no constant.  The
+  closed form must reproduce the constant this library already proves, and `1` is it.
+* `N = 6`, `k = 12` → `46656 = 6⁶`.  THE LOAD-BEARING PIN: a genuine `N > 1` level, and the same
+  instance at which `prod_zpow_pin_level_six_value` (sorry-free) pins the product to
+  `2176782336 = 6¹²` and `fricke_const_pin_level_six` (sorry-free) pins the constant to `46656`.
+  `SDF-DEF-02` and `SDF-03` are independent nodes that land on the same number here.
+* `k = 0` → `1`.  Degenerate by construction — both factors die at once.  A floor, not evidence.
+* `N = 2`, `k = 1` → `-(i·√2)`.  ODD weight: the only value that leaves `ℝ`.  Catches `i^{k}`
+  written for `i^{-k}` (which would give `+i·√2`) and a dropped root of unity (`√2`).
+* `N = 1`, `k = 2` → `-1`.  The SIGN pin.  It was the only machine-checked witness in this library
+  that the eigenvalue is ever `-1` until `SDF-13` closed, adding `(1, -2)`
+  (`frickeEigenvalue_pin_level_one_weight_neg_two`); `SDF-09` and `SDF-13`, which characterise that
+  case, are now both CLOSED, and this line called them open until then.
+* `N = 6`, `k = -12` → `1/46656`.  NEGATIVE weight, proper-fraction radicand.  A closed form that
+  had assumed `k ≥ 0` — a `k.toNat`, or `pow_pos` for `zpow_pos` — is FALSE here.
+
+THE NEGATIVE CONTROLS, which the positive pins cannot supply on their own.
+`frickeEigenvalue_pin_not_natPow`: at `N = 6`, `k = 12` the eigenvalue is `46656 = 6⁶`, NOT
+`2176782336 = 6¹²` — so a definition reading the exponent as `k` rather than `k/2`, i.e. one that
+dropped the square root, is refuted.  `frickeEigenvalue_pin_not_one`: at `N = 1`, `k = 2` the
+modulus is `1`, so a definition that dropped `i^{-k}` entirely would give `1`; the true value is
+`-1`.  Note PIN A cannot play this role — its value IS `1`, which a dropped factor also produces.
+`frickeEigenvalue_pin_nonconstant`: `46656 ≠ 1` at equal weight and different level, so the
+eigenvalue genuinely varies with `N` and has not collapsed to something trivial.
+
+BRANCH DISCIPLINE.  The square root is `Real.sqrt` of the positive real `N^k`, so no complex
+square root and no branch choice enters the eigenvalue — in contrast to `etaQuotient_fricke`'s own
+proof, which uses `Complex.sqrt` internally.  Had `SDF-DEF-02` been written with `Complex.sqrt`
+the value at every pin here would have been branch-dependent; it is not.
+
+JUNK AT `N = 0`, recorded so it is never mistaken for a claim: `(0 : ℝ)^k` is `0` for `k ≠ 0` in
+Mathlib's `zpow`, so `frickeEigenvalue 0 k = 0` for every `k ≠ 0`.  Harmless — every downstream
+statement carries `hN : 0 < N` — but the definition must not be read as meaningful at `N = 0`.
+
+SCOPE: nothing here formalises any physics.  `frickeEigenvalue` is a complex number attached to a
+level and a weight.  Persson–Volpato's CHL / axio-dilaton S-duality claim (arXiv:1504.07260) is
+cited in the module docstring at the literature (L) tier only, is NOT a Lean statement anywhere in
+this library, and must never be reported as one. -/
+
+namespace SdfDef02
+
+open SocrateAI.ModularForms
+
+/-! #### The definition itself — it elaborates -/
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue
+
+/-! #### The `i`-power lemmas the pins rest on, at INTEGER exponents -/
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_twelve' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_twelve
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_twelve' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_twelve
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_two
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_one
+
+/-! #### The six value pins -/
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pin_level_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pin_level_one
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pin_level_six' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pin_level_six
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pin_zero_weight' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pin_zero_weight
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pin_level_two_weight_one' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pin_level_two_weight_one
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pin_neg_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pin_neg_one
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pin_level_six_neg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pin_level_six_neg
+
+/-! #### The negative controls — what the closed form is NOT -/
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pin_not_natPow' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pin_not_natPow
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pin_not_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pin_not_one
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pin_nonconstant' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pin_nonconstant
+
+end SdfDef02
+
+/-! ## `SDF-01` — the `ℂ`-domain exponent-vector congruence for `etaQuotient`
+
+`SDF-01` is the ADAPTER the rest of the `SDF-*` block needs and did not have: `etaQuotient_fricke`
+(`EtaQuotientModularity.lean:2212`, sorry-free) is stated on `ℂ`, while the only congruence lemma
+that existed, `etaQuotientH_congr`, is stated on the bundled `τ : ℍ`.  Whole-library grep this
+session confirms no `ℂ`-domain version existed anywhere in `Lean/`.
+
+WHAT THE PINS BUY.  `SDF-01` itself is a `Finset.prod_congr`, so it cannot really be "wrong" in
+its proof — it can only be wrong in its STATEMENT, and specifically in whether its hypothesis is
+the one its consumer can actually discharge.  The pins below therefore fix the hypothesis at the
+exact instantiation `SDF-04` uses (`r := fun d => r (N / d)`, `s := r`), across the three regimes
+this run's discipline names, plus two negative controls and one orientation bridge.
+
+NAMING: the condition `r δ = r (N / δ)` is SELF-DUAL (Fricke-symmetric), never "balanced" — that
+word is already taken in `EtaQuotientModularity.lean` by the unrelated `Int.bmod` lemma
+`exists_balanced_add` (`F3.2-B1`).
+
+PHYSICS SCOPE: nothing guarded here formalises any physics.  Every declaration below is a
+statement about `∏_{δ ∣ N} η(δz)^{r δ}` and about `Nat.divisors`, and nothing else.
+
+All pins are discharged by `decide` (never `native_decide`), so no `Lean.ofReduceBool` enters the
+footprint; the two structural ones close by `rfl` under the binder and by `.symm`. -/
+
+namespace Sdf01
+
+open SocrateAI.ModularForms
+
+/-! #### The three regimes: level one (`k = 12`), a genuine `N > 1` non-constant vector, `r ≡ 0` -/
+
+/-- info: 'SocrateAI.ModularForms.dualExp_congr_pin_level_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms dualExp_congr_pin_level_one
+
+/-- info: 'SocrateAI.ModularForms.dualExp_congr_pin_level_six' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms dualExp_congr_pin_level_six
+
+/-- info: 'SocrateAI.ModularForms.dualExp_congr_pin_zero_exp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms dualExp_congr_pin_zero_exp
+
+/-- info: 'SocrateAI.ModularForms.dualExp_congr_pin_level_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms dualExp_congr_pin_level_two
+
+/-! #### Negative controls — the hypothesis of `SDF-01` is a genuine restriction
+
+Without these, `SDF-01` could be read as applying to the dual vector of an ARBITRARY `r`, which
+would make `SDF-04`'s appeal to self-duality vacuous.  `not_dualExp_congr_pin_asymmetric` uses the
+SAME exponent vector `r = (2, 0)` at `N = 2` as `fricke_dual_pin` (sorry-free), where `η(z)²` and
+its Fricke dual `η(2z)²` are shown to be genuinely different functions — so at that vector the
+CONCLUSION of `SDF-01` fails too, not merely its hypothesis.  `not_dualExp_congr_pin_mispaired`
+carries the same weight normalisation as the load-bearing pin and is invariant under the WRONG
+involution `1 ↔ 3`, `2 ↔ 6`, so a transposed divisor pairing would prove its negation while
+satisfying every positive pin above. -/
+
+/-- info: 'SocrateAI.ModularForms.not_dualExp_congr_pin_asymmetric' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms not_dualExp_congr_pin_asymmetric
+
+/-- info: 'SocrateAI.ModularForms.not_dualExp_congr_pin_mispaired' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms not_dualExp_congr_pin_mispaired
+
+/-! #### The orientation bridge and the application check
+
+`IsFrickeSelfDual` reads `r δ = r (N / δ)`; `SDF-01` instantiated as `SDF-04` needs it requires
+`r (N / δ) = r δ`.  The two differ by a `.symm`, and that flip is the one place a downstream proof
+could silently need something that does not exist.  `dualExp_congr_pin_level_six_of_selfDual`
+discharges the load-bearing pin's obligation FROM the sorry-free `selfDual_cond_pin_level_six`
+through exactly that bridge, and `etaQuotient_congr_divisors_pin_level_six` then runs the whole
+path to the collapsed quotient — so the step `SDF-04` is claimed to be one `rw` away from is
+machine-checked here rather than assumed. -/
+
+/-- info: 'SocrateAI.ModularForms.dualExp_congr_pin_level_six_of_selfDual' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms dualExp_congr_pin_level_six_of_selfDual
+
+/-! #### `SDF-01` itself, and the application check that it fires -/
+
+/-- info: 'SocrateAI.ModularForms.etaQuotient_congr_divisors' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms etaQuotient_congr_divisors
+
+/-- info: 'SocrateAI.ModularForms.etaQuotient_congr_divisors_pin_level_six' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms etaQuotient_congr_divisors_pin_level_six
+
+end Sdf01
+
+/-! ## `SDF-02` — the Fricke constant collapses: `∏_{δ ∣ N} δ^{r δ} = N^k` on self-dual `r`
+
+`prod_zpow_selfDual` (`EtaQuotientFrickeSelfDual.lean`) is the one genuinely arithmetic step of the
+`SDF-*` block, and it lives entirely inside `ℝ` — no complex square root and no branch choice is
+anywhere near it.  Route: `sqrt_prod_dual` (`EtaQuotientModularity.lean:2409`, sorry-free, tag
+`F3.2-A7`) gives `√s* = N^k · (√s)⁻¹` with `s = ∏_δ δ^{r δ}` and `s* = ∏_δ δ^{r (N/δ)}`;
+self-duality collapses `s*` onto `s` factor by factor on the SAME index set (`Finset.prod_congr`,
+no divisor reindexing); `s > 0` (`Finset.prod_pos` with `zpow_pos`) then turns `√s · √s = N^k` into
+`s = N^k` via `Real.mul_self_sqrt`.
+
+WHY THE HYPOTHESIS IS LOAD-BEARING, machine-checked below: `prod_zpow_pin_asymmetric_ne` exhibits
+`r = (2, 0)` at `N = 2` which satisfies the WEIGHT hypothesis exactly (`rPinAsym_weight`:
+`∑ r δ = 2 = 2·1`) and yet has `∏ δ^{r δ} = 1 ≠ 2 = N^k`.  So the `hr`-free version of `SDF-02` is
+FALSE, and this is a counterexample to it — the self-duality hypothesis cannot be dropped or
+weakened to the weight condition alone.  `prod_zpow_pin_mispaired_ne` brackets the divisor
+involution from the other side: that vector carries the same weight normalisation as the
+load-bearing pin and is invariant under the WRONG pairing `1 ↔ 3`, `2 ↔ 6`.
+
+The pins here are stated on the PRODUCT ALONE, with no `frickeEigenvalue` conjunct — deliberately,
+since the eigenvalue belongs to `SDF-DEF-02`, a different and still-open node.  That is why they
+close while the `selfDual_pin_*` conjunctions in the same file do not.
+
+NAMING: the condition `r δ = r (N / δ)` is SELF-DUAL (Fricke-symmetric), never "balanced" — that
+word is already taken in `EtaQuotientModularity.lean` by the unrelated `Int.bmod` lemma
+`exists_balanced_add` (`F3.2-B1`).
+
+PHYSICS SCOPE: nothing guarded here formalises any physics.  Every declaration below is a statement
+about a product of real powers of divisors, and nothing else.
+
+The concrete pins are discharged by `decide` (for `Nat.divisors`) and `norm_num` (for the real
+arithmetic), never `native_decide`, so no `Lean.ofReduceBool` enters the footprint. -/
+
+namespace Sdf02
+
+open SocrateAI.ModularForms
+
+/-! #### The three regimes: level one (`k = 12`), a genuine `N > 1` non-constant vector, `r ≡ 0` -/
+
+/-- info: 'SocrateAI.ModularForms.prod_zpow_pin_level_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms prod_zpow_pin_level_one
+
+/-- info: 'SocrateAI.ModularForms.prod_zpow_pin_level_six_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms prod_zpow_pin_level_six_value
+
+/-- info: 'SocrateAI.ModularForms.prod_zpow_pin_level_six' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms prod_zpow_pin_level_six
+
+/-- info: 'SocrateAI.ModularForms.prod_zpow_pin_zero_exp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms prod_zpow_pin_zero_exp
+
+/-! #### Two regimes the three above cannot reach
+
+`prod_zpow_pin_level_two` is the smallest non-degenerate instance and matches the `(√2)⁻¹` already
+pinned upstream by the sorry-free `fricke_level_two_pin`.  `prod_zpow_pin_level_four_neg` is the
+only pin with NEGATIVE exponents — `1⁻² · 2⁶ · 4⁻² = 64/16 = 4 = 4¹` — hence the only one that
+exercises the `zpow_pos` positivity step; without it, a version of `SDF-02` restricted to
+non-negative exponent vectors would satisfy every other pin here.  Level four also contributes the
+only `N > 1` divisor that is its own dual (`4 / 2 = 2`). -/
+
+/-- info: 'SocrateAI.ModularForms.prod_zpow_pin_level_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms prod_zpow_pin_level_two
+
+/-- info: 'SocrateAI.ModularForms.prod_zpow_pin_level_four_neg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms prod_zpow_pin_level_four_neg
+
+/-- info: 'SocrateAI.ModularForms.rPinLevelFourNeg_selfDual' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms rPinLevelFourNeg_selfDual
+
+/-- info: 'SocrateAI.ModularForms.rPinLevelFourNeg_weight' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms rPinLevelFourNeg_weight
+
+/-! #### Negative controls — `IsFrickeSelfDual` cannot be dropped from `SDF-02` -/
+
+/-- info: 'SocrateAI.ModularForms.prod_zpow_pin_asymmetric_ne' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms prod_zpow_pin_asymmetric_ne
+
+/-- info: 'SocrateAI.ModularForms.rPinAsym_weight' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms rPinAsym_weight
+
+/-- info: 'SocrateAI.ModularForms.prod_zpow_pin_mispaired_ne' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms prod_zpow_pin_mispaired_ne
+
+/-! #### `SDF-02` itself, and the application check that it reproduces the load-bearing pin
+
+`prod_zpow_selfDual_pin_level_six` re-derives `2176782336` by RUNNING the general lemma at
+`(N, r, k) = (6, rPinSix, 12)`, where `prod_zpow_pin_level_six_value` asserts the same number by
+direct computation.  A general statement that had drifted — a wrong exponent, `N^{k/2}` for `N^k`,
+the dual product for the original — would produce a different number here while staying provable in
+its own terms. -/
+
+/-- info: 'SocrateAI.ModularForms.prod_zpow_selfDual' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms prod_zpow_selfDual
+
+/-- info: 'SocrateAI.ModularForms.prod_zpow_selfDual_pin_level_six' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms prod_zpow_selfDual_pin_level_six
+
+end Sdf02
+
+/-! ## `SDF-03` — the constant of `etaQuotient_fricke` in closed form
+
+`SDF-03` collapses the constant `N^k · s^{-1/2}` of `etaQuotient_fricke` (`s = ∏_{δ ∣ N} δ^{r δ}`)
+to the single real square root `√(N^k) = N^{k/2}` on a Fricke-self-dual exponent vector.  Resolved
+by `SocrateAI.ModularForms.fricke_const_selfDual`
+(`SocrateAI/ModularForms/EtaQuotientFrickeSelfDual.lean`).
+
+WHAT THE GUARDS BUY.  The proof is short — `SDF-02` (`prod_zpow_selfDual`) does the arithmetic, and
+what remains is `a · (√a)⁻¹ = √a` at the positive real `a = N^k`, proved in `ℝ` and only then cast
+into `ℂ`.  So the risk is entirely in the STATEMENT, not the proof, and the pins below are what
+constrain it: each fixes a concrete `(N, r, k)` and matches BOTH sides separately against a numeral
+computed outside Lean first (exact rational arithmetic).
+
+`fricke_const_pin_level_six` is the load-bearing one — the only pin with `N > 1` and a non-constant
+exponent vector, where `√(N^k) = 46656` and `N^k = 2176782336` are different numbers.
+`fricke_const_pin_level_six_neg` is the only pin with `k < 0`, where `N^k` and `√(N^k)` are proper
+fractions; a statement that had silently assumed `k ≥ 0` (`k.toNat`, or `pow_pos` for `zpow_pos`)
+would satisfy every other pin and fail there.  `fricke_const_pin_level_one` and
+`fricke_const_pin_zero_exp` are DEGENERATE BY CONSTRUCTION (both sides are `1`) and are guarded as
+floors, not as evidence about exponents.
+
+NEGATIVE CONTROLS.  `fricke_const_pin_not_natPow` shows the square root cannot be dropped
+(`√(6¹²) ≠ 6¹²`) and `fricke_const_pin_not_mul` shows the inversion cannot be dropped
+(`6¹² · √s ≠ √(6¹²)`); both fail exactly at the load-bearing instance and are invisible at the
+degenerate ones, which is why the degenerate pins are not sufficient on their own.
+
+APPLICATION CHECKS.  `fricke_const_selfDual_pin_level_six` and
+`fricke_const_selfDual_pin_level_six_neg` re-derive `46656` and `1/46656` by RUNNING the general
+lemma at those instances, i.e. through the general proof rather than around it, so a general
+statement that had drifted would return a different number while staying provable in its own terms.
+
+NAMING: the condition `r δ = r (N / δ)` is SELF-DUAL (Fricke-symmetric), never "balanced" — that
+word is already taken in `EtaQuotientModularity.lean` by the unrelated `Int.bmod` lemma
+`exists_balanced_add` (`F3.2-B1`).
+
+PHYSICS SCOPE: nothing guarded here formalises any physics.  Every declaration below is an identity
+between real and complex numbers attached to an eta-quotient exponent vector.  No S-duality, no
+axio-dilaton, no CHL content is asserted anywhere in this section or in the file it guards. -/
+
+namespace Sdf03
+
+/-! #### The square-root values the pins are stated against -/
+
+/-- info: 'SocrateAI.ModularForms.sqrt_natPow_level_six' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms sqrt_natPow_level_six
+
+/-- info: 'SocrateAI.ModularForms.sqrt_natPow_level_four' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms sqrt_natPow_level_four
+
+/-- info: 'SocrateAI.ModularForms.sqrt_natPow_level_six_neg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms sqrt_natPow_level_six_neg
+
+/-! #### The `SDF-03` pins -/
+
+/-- info: 'SocrateAI.ModularForms.fricke_const_pin_level_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms fricke_const_pin_level_one
+
+/-- info: 'SocrateAI.ModularForms.fricke_const_pin_level_six' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms fricke_const_pin_level_six
+
+/-- info: 'SocrateAI.ModularForms.fricke_const_pin_zero_exp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms fricke_const_pin_zero_exp
+
+/-- info: 'SocrateAI.ModularForms.fricke_const_pin_level_four_neg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms fricke_const_pin_level_four_neg
+
+/-! #### The negative-weight pin, and that its vector really satisfies the hypotheses -/
+
+/-- info: 'SocrateAI.ModularForms.rPinLevelSixNeg_selfDual' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms rPinLevelSixNeg_selfDual
+
+/-- info: 'SocrateAI.ModularForms.rPinLevelSixNeg_weight' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms rPinLevelSixNeg_weight
+
+/-- info: 'SocrateAI.ModularForms.prod_zpow_pin_level_six_neg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms prod_zpow_pin_level_six_neg
+
+/-- info: 'SocrateAI.ModularForms.fricke_const_pin_level_six_neg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms fricke_const_pin_level_six_neg
+
+/-! #### Negative controls — the square root and the inversion are both load-bearing -/
+
+/-- info: 'SocrateAI.ModularForms.fricke_const_pin_not_natPow' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms fricke_const_pin_not_natPow
+
+/-- info: 'SocrateAI.ModularForms.fricke_const_pin_not_mul' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms fricke_const_pin_not_mul
+
+/-! #### `SDF-03` itself, and the application checks that it reproduces the pins -/
+
+/-- info: 'SocrateAI.ModularForms.fricke_const_selfDual' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms fricke_const_selfDual
+
+/-- info: 'SocrateAI.ModularForms.fricke_const_selfDual_pin_level_six' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms fricke_const_selfDual_pin_level_six
+
+/-- info: 'SocrateAI.ModularForms.fricke_const_selfDual_pin_level_six_neg' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms fricke_const_selfDual_pin_level_six_neg
+
+end Sdf03
+
+
+/-! ## `SDF-04` — the eigenform relation, raw shape
+
+`SDF-04` specialises `etaQuotient_fricke` (`EtaQuotientModularity.lean:2212`, sorry-free) to a
+Fricke-self-dual exponent vector.  On such an `r` the DUAL quotient
+`etaQuotient N (fun δ => r (N / δ)) z` sitting on the right of that theorem collapses to the
+original `etaQuotient N r z`, so the transformation law becomes a genuine eigenform relation:
+the Fricke transform of the quotient is a scalar times `z^k` times the quotient ITSELF.  Resolved
+by `SocrateAI.ModularForms.etaQuotient_fricke_selfDual_raw`
+(`SocrateAI/ModularForms/EtaQuotientFrickeSelfDual.lean`).
+
+WHAT IS AND IS NOT CLAIMED HERE.  The constant is left EXACTLY as `etaQuotient_fricke` writes it,
+`i^{-k} · N^k · s^{-1/2}` with `s = ∏_{δ ∣ N} δ^{r δ}` and with `r`, not the dual vector, inside.
+Nothing about the constant is asserted by this node; collapsing it to `√(N^k) = N^{k/2}` is `SDF-03`
+and `SDF-05`, which are separate nodes with separate guards.  Keeping the two apart is deliberate —
+"collapse the quotient" (trivial, uses only `SDF-01`) must never be conflated with "collapse the
+constant" (needs the arithmetic of `SDF-02`).
+
+RELATIVE TO THE REFERENCE, `SDF-04` is strictly a SPECIALISATION: it ADDS the hypothesis
+`IsFrickeSelfDual N r` to `etaQuotient_fricke` and changes nothing else except the final factor.
+It is never a strengthening of the reference, and it is not the reference with a decorative
+hypothesis bolted on either — `not_selfDual_pin_asymmetric` (guarded in section `SdfDef01`)
+`decide`-proves that `r = (2, 0)` at `N = 2` FAILS the hypothesis, and `fricke_dual_pin`
+(`EtaQuotientModularity.lean`, sorry-free) proves that the Fricke transform there lands on `η(2z)²`,
+the quotient of the DUAL vector `(0, 2)`, not on `η(z)²`.  Stated precisely so it is not oversold:
+what is machine-proved is that the two exponent vectors differ and that the transform lands on the
+dual one; that `η(z)²` and `η(2z)²` are different FUNCTIONS is true and recorded in that pin's
+docstring but is not itself a theorem here, so "the conclusion is false at that `r`" is a
+hand-checked claim, not a Lean one.
+
+WHAT THE GUARDS BUY.  The proof is two rewrites, so the risk is in the statement and in whether the
+first rewrite really leaves nothing but the collapse.  The four instance pins below are what
+constrain that: unlike every earlier pin set in this file they are stated as instances of `SDF-04`'s
+OWN EQUATION at concrete `(N, r, k)`, discharged along the same two-rewrite route, and NONE of them
+invokes `etaQuotient_fricke_selfDual_raw` — they are declared ABOVE it in the same module, so Lean's
+scoping makes referring to it impossible and the compiler, not this comment, enforces that.  They
+are therefore evidence about the route rather than consequences of it.  Each closes with the two
+rewrites alone, which machine-checks that there is no residual goal and no side condition.
+
+`selfDual_raw_pin_level_six` is the load-bearing one: the only instance with `N > 1` AND a
+non-constant exponent vector, hence the only one where the dual quotient is a genuinely reordered
+product rather than a syntactic no-op.  `selfDual_raw_pin_level_four_neg` is the only one with
+NEGATIVE exponents, and the only level here with a divisor that is its own dual (`4 / 2 = 2`), a
+fixed point of `δ ↦ N/δ`.  `selfDual_raw_pin_level_one` and `selfDual_raw_pin_zero_exp` are
+DEGENERATE BY CONSTRUCTION and are guarded as floors, not as evidence about the involution.
+
+THE EXTERNAL CROSS-CHECK.  `selfDual_raw_pin_level_one_is_eta_S` carries the level-one instance all
+the way down to `η(-1/z)²⁴ = z¹² η(z)²⁴` — which is `eta_S_via_fricke`
+(`EtaQuotientModularity.lean:2246`, sorry-free, itself checked there against MATHLIB's
+`discriminant_S_invariant`).  It DERIVES that conclusion from the pin and names neither existing
+derivation of it.  Both are in scope there, so absence from the source text is not enough on its
+own; what closes the gap is that every tactic in that proof except `norm_num` takes an EXPLICIT
+lemma list and neither target carries `@[simp]` (checked this run against this library and against
+the pinned Mathlib), so `norm_num`'s default set cannot reach them either.  It is therefore an
+agreement between two independent routes.  It is a FLOOR, not a discriminating test: at `N = 1`,
+`k = 12` it pins NO component of `λ` — `selfDual_pin_level_one_no_evidence_*` proves all four.
+
+NAMING: the condition `r δ = r (N / δ)` is SELF-DUAL (Fricke-symmetric), never "balanced" — that
+word is already taken in `EtaQuotientModularity.lean` by the unrelated `Int.bmod` lemma
+`exists_balanced_add` (`F3.2-B1`).
+
+All weight witnesses are discharged by `decide` (never `native_decide`), so no `Lean.ofReduceBool`
+enters the footprint.
+
+PHYSICS SCOPE.  Nothing guarded here formalises any physics.  `SDF-04` is an identity between two
+explicit products of values of Mathlib's `ModularForm.eta`; it says nothing about `Γ₀(N)`-modularity,
+nothing about holomorphy at the cusps, and nothing about S-duality, the axio-dilaton or CHL models.
+Persson–Volpato (arXiv:1504.07260) is cited in the guarded file's docstring as the ORIGIN of the
+question only, at the literature (L) tier; their physics claim is NOT a Lean statement anywhere in
+this library and must never be reported as one. -/
+
+namespace Sdf04
+
+open SocrateAI.ModularForms
+
+/-! #### The weight witnesses the pins are stated against -/
+
+/-- info: 'SocrateAI.ModularForms.rPinOne_weight' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms rPinOne_weight
+
+/-- info: 'SocrateAI.ModularForms.rPinSix_weight' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms rPinSix_weight
+
+/-- info: 'SocrateAI.ModularForms.zeroExp_weight_level_six' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms zeroExp_weight_level_six
+
+/-! #### The `SDF-04` instance pins — `SDF-04`'s own equation at concrete `(N, r, k)` -/
+
+/-- info: 'SocrateAI.ModularForms.selfDual_raw_pin_level_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_raw_pin_level_one
+
+/-- info: 'SocrateAI.ModularForms.selfDual_raw_pin_level_six' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_raw_pin_level_six
+
+/-- info: 'SocrateAI.ModularForms.selfDual_raw_pin_zero_exp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_raw_pin_zero_exp
+
+/-- info: 'SocrateAI.ModularForms.selfDual_raw_pin_level_four_neg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_raw_pin_level_four_neg
+
+/-! #### The external cross-check against `eta_S_via_fricke` / `discriminant_S_invariant` -/
+
+/-- info: 'SocrateAI.ModularForms.selfDual_raw_pin_level_one_is_eta_S' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_raw_pin_level_one_is_eta_S
+
+/-! #### `SDF-04` itself -/
+
+/-- info: 'SocrateAI.ModularForms.etaQuotient_fricke_selfDual_raw' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms etaQuotient_fricke_selfDual_raw
+
+end Sdf04
+
+/-! ## `SDF-05` — the eigenform relation with the eigenvalue in CLOSED FORM
+
+`SDF-05` is the headline of `EtaQuotientFrickeSelfDual.lean`.  It takes `SDF-04`'s eigenform
+relation — whose constant is still `etaQuotient_fricke`'s raw `i^{-k} · N^k · s^{-1/2}`, with the
+exponent vector present through `s = ∏_{δ ∣ N} δ^{r δ}` — and collapses that constant to
+`frickeEigenvalue N k = i^{-k} · √(N^k) = i^{-k} · N^{k/2}`, which mentions only the LEVEL and the
+WEIGHT.  Resolved by `SocrateAI.ModularForms.etaQuotient_fricke_selfDual`
+(`SocrateAI/ModularForms/EtaQuotientFrickeSelfDual.lean`).
+
+THE INVERTED TRIPWIRE IN SECTION `SdfDef01` HAS BEEN INVERTED BACK — the guard that asserted
+`etaQuotient_fricke_selfDual` depends on `sorryAx` is GONE, replaced by the ordinary positive guard
+at the end of this section, in the same commit that discharged the node.  This paragraph is the
+receipt for that inversion, kept so the change is visible rather than silent (LL-2).
+
+WHAT IS AND IS NOT CLAIMED.  `SDF-05` is an identity between two explicit finite products of values
+of Mathlib's `ModularForm.eta`.  It says NOTHING about `Γ₀(N)`-modularity, NOTHING about holomorphy
+or order at the cusps, and NOTHING about physics.  In particular it does not say that a self-dual
+eta quotient IS a modular form, only how the Fricke involution acts on the function it defines.
+
+RELATIVE TO `SDF-04` it is strictly STRONGER, and neither strengthening is asserted for free: the
+constant becomes `r`-free (that is `SDF-03`, itself resting on `SDF-02`, the one genuinely
+arithmetical step in the file, both closed and guarded above).  Relative to `etaQuotient_fricke`
+(`EtaQuotientModularity.lean:2212`, sorry-free, tag `F3.2-A7`) it is a SPECIALISATION plus a
+simplification: it ADDS the hypothesis `IsFrickeSelfDual N r` and drops nothing.
+
+WHAT THE GUARDS BUY.  The proof is three rewrites and a `ring`, so all the risk is in the statement.
+The instance pins below are what constrain it: they are stated as instances of `SDF-05`'s OWN
+EQUATION at concrete `(N, r, k)`, and NONE of them invokes `etaQuotient_fricke_selfDual` — they are
+declared ABOVE it in the same module, so Lean's scoping makes referring to it impossible and the
+compiler, not this comment, enforces that.  Five of them fix the equation with `frickeEigenvalue N k`
+in the constant slot; four more re-state it with the eigenvalue replaced by the NUMERAL computed by
+hand outside Lean, reached through `SDF-DEF-02`'s `frickeEigenvalue_pin_*` lemmas — which are proved
+from `Real.sqrt_sq` and never touch `s`.  So each numeral is reached twice, by routes that share no
+lemma, and they agree.
+
+`selfDual_eigen_pin_level_six` / `..._value` is the load-bearing pair: the only instance with `N > 1`
+AND a non-constant exponent vector, hence the only one where the collapse moves a real number
+(`2176782336 · 46656⁻¹ = 46656`).  `selfDual_eigen_pin_level_four_neg` is the only ODD weight (so
+`i^{-k} = -i` is not real) and the only one with NEGATIVE exponents and a self-dual divisor
+(`4 / 2 = 2`).  `selfDual_eigen_pin_level_six_neg` is the only NEGATIVE weight, where `N^k` and
+`√(N^k)` are proper fractions rather than integers — the case a `k.toNat` or a `pow_pos`-in-place-of
+-`zpow_pos` slip would fail.  `selfDual_eigen_pin_level_one` and `selfDual_eigen_pin_zero_exp` are
+DEGENERATE BY CONSTRUCTION and are guarded as floors, not as evidence about the involution.
+
+NON-VACUITY, guarded elsewhere in this file and not restated: `not_selfDual_pin_asymmetric` and
+`not_selfDual_pin_mispaired` (section `SdfDef01`) `decide`-prove that the hypothesis is a genuine
+restriction and that the divisor involution is the right one; `prod_zpow_pin_asymmetric_ne` (section
+`Sdf02`) is an `hk`-satisfying counterexample to dropping `hr`; `frickeEigenvalue_pin_not_natPow`
+and `frickeEigenvalue_pin_nonconstant` (section `SdfDef02`) separate `√(N^k)` from `N^k` and show the
+eigenvalue is not constant in `N`.  And `selfDual_cond_pin_level_six` exhibits a self-dual vector at
+`N = 6` with `rPinSix 1 ≠ rPinSix 2`, so the theorem is not the `N = 1` case in disguise.
+
+THE FIVE CONJUNCTION PINS.  `selfDual_pin_level_one` and its four siblings bundle, at one instance
+each, the self-duality condition, the weight, the product `∏ δ^{r δ}` as a literal AND as `N^k`, and
+the eigenvalue.  They were `SDF-05`'s bookkeeping and are now closed by assembly from facts already
+proved separately; they are guarded here rather than in `SdfDef01` or `Sdf02` because that is the
+node they belong to.  `selfDual_pin_level_two_weight_one` and `selfDual_pin_eigenvalue_neg_one`
+cover the two eigenvalue regimes no other pin reaches: `k` odd (imaginary `λ`) and `k ≡ 2 (mod 4)`
+(`λ = -1`).
+
+`SDF-06` closed one run later and is guarded in section `Sdf06` below, `SDF-07` … `SDF-10` closed in
+the runs after that and are guarded in sections `Sdf07` … `Sdf10`, `SDF-11` and `SDF-12` closed after
+those in sections `Sdf11` and `Sdf12`, and `SDF-13` — the last one — is guarded in section `Sdf13`;
+this paragraph named each of them as open until then, and said of `SDF-13` that it "remains OPEN and
+carries no guard" until the run that closed it.  NO `SDF-*` node is open now.
+
+All `decide`s in the guarded declarations are `decide`, never `native_decide`, so no
+`Lean.ofReduceBool` enters any footprint below.
+
+PHYSICS SCOPE.  Nothing guarded here formalises any physics.  Persson–Volpato (arXiv:1504.07260)
+is cited in the guarded file's docstring as the ORIGIN of the question only, at the literature (L)
+tier of this programme's ladder; their CHL / axio-dilaton S-duality claim is NOT a Lean statement
+anywhere in this library and must never be reported as one.  Their term for the `r δ = r (N/δ)`
+condition is "balanced"; this library calls it SELF-DUAL, both to avoid their physics framing and
+because `balanced` is already taken in `EtaQuotientModularity.lean` by the unrelated `Int.bmod`
+lemma `exists_balanced_add` (`F3.2-B1`). -/
+
+namespace Sdf05
+
+open SocrateAI.ModularForms
+
+/-! #### The eigenvalue value the odd-weight pin is stated against -/
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pin_level_four' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pin_level_four
+
+/-! #### The `SDF-05` instance pins — `SDF-05`'s own equation at concrete `(N, r, k)` -/
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_one
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_six' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_six
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_zero_exp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_zero_exp
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_four_neg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_four_neg
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_six_neg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_six_neg
+
+/-! #### The same five instances with the eigenvalue evaluated to its hand-computed NUMERAL -/
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_one_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_one_value
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_six_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_six_value
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_zero_exp_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_zero_exp_value
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_four_neg_value' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_four_neg_value
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_six_neg_value' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_six_neg_value
+
+/-! #### The five conjunction pins — `SDF-05`'s bookkeeping, now closed -/
+
+/-- info: 'SocrateAI.ModularForms.selfDual_pin_level_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_pin_level_one
+
+/-- info: 'SocrateAI.ModularForms.selfDual_pin_level_six' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_pin_level_six
+
+/-- info: 'SocrateAI.ModularForms.selfDual_pin_zero_exp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_pin_zero_exp
+
+/-- info: 'SocrateAI.ModularForms.selfDual_pin_level_two_weight_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_pin_level_two_weight_one
+
+/-- info: 'SocrateAI.ModularForms.selfDual_pin_eigenvalue_neg_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_pin_eigenvalue_neg_one
+
+/-! #### `SDF-05` itself -/
+
+/-- info: 'SocrateAI.ModularForms.etaQuotient_fricke_selfDual' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms etaQuotient_fricke_selfDual
+
+end Sdf05
+
+-- STATEMENT PIN (LL-1).  The guard above certifies the PROOF; the pin below certifies the
+-- STATEMENT.
+--
+-- It is a NAMED theorem rather than an anonymous `example`, for the same reason as the F3.1-B0
+-- gate witness at line 284: so that the `SDF-GUARD` DAG node has a `lean_name` that resolves
+-- (`dag/check_dag.py` rule 3) and carries an axiom guard of its own (rule 7).  It proves nothing
+-- new — its whole content is that `SDF-05`, restated with every abbreviation of ours removed,
+-- is the same proposition.
+--
+-- `SDF-05` longhand, in the node's own words, with NOTHING hiding behind a SocrateAI definition:
+-- the level is a POSITIVE natural (`ℕ+`), the point is a bundled `z : ℍ`, the exponent vector is
+-- the bare `ℕ → ℤ` rather than the `EtaExp` abbreviation, `IsFrickeSelfDual` is UNFOLDED to the
+-- bounded quantifier `∀ δ ∈ N.divisors, r δ = r (N / δ)`, `frickeEigenvalue` is UNFOLDED to
+-- `i^{-k} · √(N^k)`, and BOTH eta quotients are written out as products over `Nat.divisors` with
+-- `ModularForm.eta` fully qualified.  Unfolding the EIGENVALUE is the point of this pin: the
+-- eigenvalue is the entire content of `SDF-05`, so it is precisely the term that must not be
+-- quoted back through a definition of ours.  Compare the A7 pin at line 1657, which writes out
+-- that node's raw constant `i^{-k} · N^k · (√s)⁻¹` for the same reason.
+--
+-- What a reader can then check by eye, with no definition to chase: the RIGHT-hand eta product
+-- runs over `r δ`, the SAME vector as the left — not the dual `r (N/δ)` that F3.2-A7's law
+-- carries (pinned at line 1657).  That collapse is what turns a transformation law into an
+-- eigenform relation, and here it is visible as text.
+--
+-- NON-VACUITY CHECKED, not assumed (`scratch_sdfguard/neg/S05_*.lean`).  Five perturbations of
+-- the statement below, each fed this same proof term, all fail to elaborate: `i^{+k}` for
+-- `i^{-k}`, `√(N^{2k})` for `√(N^k)`, `(√(N^k))⁻¹` for `√(N^k)`, `z^{2k}` for `z^k`, and the dual
+-- `r (N/δ)` for `r δ` in the right-hand product.
+--
+-- SCOPE -- READ BEFORE CITING.  One identity between two explicit finite products of values of
+-- Mathlib's `ModularForm.eta` on the open upper half-plane.  It says nothing about
+-- `Γ₀(N)`-modularity, nothing at any cusp, and nothing about physics.
+section Sdf05StatementPin
+open ModularForm UpperHalfPlane CongruenceSubgroup Matrix Complex
+open scoped MatrixGroups Real
+
+/-- **`SDF-GUARD` — the `SDF-05` STATEMENT pin, longhand.**  `etaQuotient_fricke_selfDual` with
+`EtaExp`, `IsFrickeSelfDual`, `frickeEigenvalue` and `etaQuotient` all unfolded, so the eigenform
+relation and its eigenvalue `i^{-k} · √(N^k)` are readable without chasing a SocrateAI
+definition.  Proves nothing new; see the comment above. -/
+theorem SocrateAI.ModularForms.etaQuotient_fricke_selfDual_statement_pin :
+    ∀ (N : ℕ+) (r : ℕ → ℤ) (k : ℤ),
+    (∀ δ ∈ (N : ℕ).divisors, r δ = r ((N : ℕ) / δ)) →
+    (∑ δ ∈ (N : ℕ).divisors, r δ) = 2 * k → ∀ z : ℍ,
+    (∏ δ ∈ (N : ℕ).divisors,
+        ModularForm.eta ((δ : ℂ) * (-(1 / (((N : ℕ) : ℂ) * (z : ℂ))))) ^ (r δ))
+      = Complex.I ^ (-k) * ((Real.sqrt ((((N : ℕ) : ℝ)) ^ k) : ℝ) : ℂ)
+        * (z : ℂ) ^ k
+        * ∏ δ ∈ (N : ℕ).divisors, ModularForm.eta ((δ : ℂ) * (z : ℂ)) ^ (r δ) :=
+  fun N _ _ hr hk z => SocrateAI.ModularForms.etaQuotient_fricke_selfDual N.pos hr hk z.2
+
+/-- info: 'SocrateAI.ModularForms.etaQuotient_fricke_selfDual_statement_pin' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms SocrateAI.ModularForms.etaQuotient_fricke_selfDual_statement_pin
+
+end Sdf05StatementPin
+
+/-! ## `SDF-06` — the NORMALISED form: the eigenvalue is a root of unity
+
+`SDF-06` divides `SDF-05` through by the normaliser `√(N^k)` and by `z^k`, leaving
+
+`(√(N^k))⁻¹ · z^{-k} · f(-1/(Nz)) = i^{-k} · f(z)`
+
+so the whole eigenvalue is `i^{-k}`, a fourth ROOT OF UNITY, with no residual power of the level.
+Resolved by `SocrateAI.ModularForms.etaQuotient_fricke_selfDual_normalized`
+(`SocrateAI/ModularForms/EtaQuotientFrickeSelfDual.lean`).
+
+WHAT THIS NODE ADDS, AND WHAT IT MUST NOT BE READ AS ADDING.  The division is bookkeeping.  The
+`N`-dependence does not cancel because of anything visible in `SDF-06`; it cancels because
+`∏_{δ ∣ N} δ^{r δ} = N^k` on a self-dual vector — `prod_zpow_selfDual` (`SDF-02`, guarded above,
+the only genuinely arithmetical step in that file: it routes through `sqrt_prod_dual` (`F3.2-A7`)
+and then uses positivity of the product to pick the root `+N^k` rather than `-N^k`) — packaged into
+`ℂ` by `fricke_const_selfDual` (`SDF-03`, guarded above) and absorbed into `frickeEigenvalue` by
+`SDF-05`.  Anyone reading "the `N`-dependence cancels completely" as this node's achievement is
+reading it wrongly, and the module docstring says so too.
+
+THE TWO CANCELLATIONS EACH NEED A HYPOTHESIS, and that is where the risk in an otherwise mechanical
+proof sits: `(√(N^k))⁻¹ · √(N^k) = 1` needs `√(N^k) ≠ 0`, from `0 < N` via `zpow_pos` — `zpow_pos`,
+NOT `pow_pos`, because `k < 0` is in scope and is pinned at `k = -12`; and `z^{-k} · z^k = 1` needs
+`z ≠ 0`, extracted from membership in the OPEN upper half-plane.  `ring` performs NEITHER — verified
+this run by running `ring` alone on the post-`SDF-05` goal, where it fails and reports the
+uncancelled residue `√(N^k) · (√(N^k))⁻¹ · z^{-k} · i^{-k} · z^k · f = i^{-k} · f`.  That failure is
+correct: both cancellations are false at `N = 0` and at `z = 0`.  `ring` only re-associates.
+
+WHAT THE GUARDS BUY.  As with `SDF-04` and `SDF-05`, the proof is short and all the risk is in the
+statement, so the instance pins are the evidence.  They are stated as instances of `SDF-06`'s OWN
+equation at concrete `(N, r, k)` and NONE of them invokes
+`etaQuotient_fricke_selfDual_normalized` — they are declared ABOVE it in the same module, so Lean's
+scoping makes referring to it impossible and the compiler, not this comment, enforces that.  Each
+carries a NUMERAL normaliser, so the cancellation a pin performs is `46656⁻¹ · 46656 = 1` rather than
+`inv_mul_cancel₀` at a symbolic root.
+
+`selfDual_norm_pin_level_six` / `..._value` is the load-bearing pair: `N > 1`, a non-constant
+exponent vector, and a normaliser (`46656⁻¹`) that genuinely divides.  `selfDual_norm_pin_level_six_neg`
+is THE SIGN PIN of this node: at `k = -12` the statement carries `z^{-k} = z^{+12}` and the
+normaliser `(√(6⁻¹²))⁻¹ = 46656 > 1`, so a transcription with `z^k` for `z^{-k}`, or with the
+normaliser uninverted, is FALSE there while surviving the `k = 0` pin;
+`selfDual_norm_pin_level_one` moves the same exponent in the opposite direction, and the two together
+fix its sign.  `selfDual_norm_pin_level_four_neg` / `..._value` is the only ODD weight, hence the
+only instance whose normalised eigenvalue (`-i`) is neither `1` nor `-1` — without it every guarded
+instance would have `4 ∣ k` and eigenvalue `1`, which is also what a statement that had LOST the
+`i^{-k}` factor would produce.  `selfDual_norm_pin_level_one` and `selfDual_norm_pin_zero_exp` are
+DEGENERATE BY CONSTRUCTION (`√(1^k) = 1`; `k = 0` kills all three factors at once) and are guarded as
+floors, not as evidence about the involution or the normalisation.
+
+EXTERNAL CROSS-CHECK, not an input.  `selfDual_norm_pin_level_one_is_eta_S` carries the level-one
+instance down to `z⁻¹² · η(-1/z)²⁴ = η(z)²⁴`, which is `eta_S_via_fricke`
+(`EtaQuotientModularity.lean:2246`, sorry-free) divided by `z¹²` and is proved independently in
+MATHLIB as `discriminant_S_invariant`.  It is DERIVED, not cited: the proof starts from
+`selfDual_eigen_pin_level_one_value` and names neither target, every tactic in it takes an explicit
+lemma list, and neither target carries `@[simp]` (re-verified this run over this library and over the
+pinned Mathlib), so `norm_num`'s default set cannot reach them either.
+
+NEGATIVE CONTROL, and its honest limit.  `selfDual_norm_pin_asymmetric_ne` shows the two normalisers
+diverge at the non-self-dual `rPinAsym = (2, 0)`, which satisfies the weight hypothesis exactly:
+`SDF-06`'s `√(2¹) = √2` against the raw law's `√(1² · 2⁰) = 1`.  So `hr` is load-bearing here and not
+decoration.  What is machine-proved is the discrepancy between the two NORMALISERS; that the full
+conclusion also fails at that `r` (`fricke_dual_pin` gives `η(-1/(2z))² = -2i z η(2z)²`, so the
+`hr`-free reading would assert `-i√2 · η(2z)² = -i · η(z)²`) needs `η(z)² ≠ η(2z)²` as functions,
+which is true, is recorded in `fricke_dual_pin`'s docstring, and is NOT a theorem in this library —
+so that half is asserted at the hand-check level, exactly as in section `Sdf04`.
+
+APPLICATION CHECKS.  `etaQuotient_fricke_selfDual_normalized_pin_level_six` and
+`..._pin_level_six_neg` state the same two equations as the `_value` pins but RUN THE GENERAL LEMMA
+at those instances, so each equation is reached twice by routes that share no lemma — once through
+`SDF-05`'s numeral pins, once through `SDF-06` — and they agree.  The negative-weight one is what
+shows the general proof does not silently assume `k ≥ 0`.
+
+`SDF-07` … `SDF-15` are ALL CLOSED and guarded in sections `Sdf07`, `Sdf08`, `Sdf09`, `Sdf10`,
+`Sdf11`, `Sdf12`, `Sdf13`, `Sdf14` and `Sdf15` below.  No `SDF-*` node is open, and
+`EtaQuotientFrickeSelfDual.lean` is `sorry`-free in full.  (This paragraph named `SDF-10`, then
+`SDF-11`, then `SDF-12`, then `SDF-13`, then `SDF-14`, then `SDF-15` as open until the runs that
+closed them; the sentences were rewritten together each time, not one of them.)  No `SDF-*` node
+carries an inverted tripwire; `SDF-06` never had one, because its statement landed and its proof
+followed in the same run, and neither did `SDF-07` … `SDF-15`.
+
+All `decide`s in the guarded declarations are `decide`, never `native_decide`, so no
+`Lean.ofReduceBool` enters any footprint below.
+
+PHYSICS SCOPE.  Nothing guarded here formalises any physics.  `SDF-06` is an identity between two
+explicit finite products of values of Mathlib's `ModularForm.eta`; it says NOTHING about
+`Γ₀(N)`-modularity, NOTHING about holomorphy or order at the cusps, and NOTHING about physics.  The
+claim that this normalisation is the classical one (Martin, *Multiplicative eta-quotients*, Trans.
+AMS 348 (1996)) is a CITATION claim about Martin's convention, at the literature (L) tier of this
+programme's ladder, and is checked by nothing here.  Persson–Volpato (arXiv:1504.07260) is cited in
+the guarded file's docstring as the ORIGIN of the question only, also at the L tier; their CHL /
+axio-dilaton S-duality claim is NOT a Lean statement anywhere in this library and must never be
+reported as one.  Their term for the `r δ = r (N/δ)` condition is "balanced"; this library calls it
+SELF-DUAL. -/
+
+namespace Sdf06
+
+open SocrateAI.ModularForms
+
+/-! #### The two radicand values the normalisers are stated against -/
+
+/-- info: 'SocrateAI.ModularForms.sqrt_natPow_level_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms sqrt_natPow_level_one
+
+/-- info: 'SocrateAI.ModularForms.sqrt_natPow_zero_weight' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms sqrt_natPow_zero_weight
+
+/-! #### The `SDF-06` instance pins — `SDF-06`'s own equation at concrete `(N, r, k)` -/
+
+/-- info: 'SocrateAI.ModularForms.selfDual_norm_pin_level_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_norm_pin_level_one
+
+/-- info: 'SocrateAI.ModularForms.selfDual_norm_pin_level_six' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_norm_pin_level_six
+
+/-- info: 'SocrateAI.ModularForms.selfDual_norm_pin_zero_exp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_norm_pin_zero_exp
+
+/-- info: 'SocrateAI.ModularForms.selfDual_norm_pin_level_four_neg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_norm_pin_level_four_neg
+
+/-- info: 'SocrateAI.ModularForms.selfDual_norm_pin_level_six_neg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_norm_pin_level_six_neg
+
+/-! #### The same instances with normaliser and eigenvalue evaluated to their hand-computed NUMERALS -/
+
+/-- info: 'SocrateAI.ModularForms.selfDual_norm_pin_level_six_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_norm_pin_level_six_value
+
+/-- info: 'SocrateAI.ModularForms.selfDual_norm_pin_level_four_neg_value' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_norm_pin_level_four_neg_value
+
+/-- info: 'SocrateAI.ModularForms.selfDual_norm_pin_level_six_neg_value' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_norm_pin_level_six_neg_value
+
+/-! #### The external cross-check against Mathlib's `discriminant_S_invariant` -/
+
+/-- info: 'SocrateAI.ModularForms.selfDual_norm_pin_level_one_is_eta_S' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_norm_pin_level_one_is_eta_S
+
+/-! #### The negative control — `hr` is load-bearing in the normaliser -/
+
+/-- info: 'SocrateAI.ModularForms.selfDual_norm_pin_asymmetric_ne' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_norm_pin_asymmetric_ne
+
+/-! #### `SDF-06` itself -/
+
+/-- info: 'SocrateAI.ModularForms.etaQuotient_fricke_selfDual_normalized' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms etaQuotient_fricke_selfDual_normalized
+
+/-! #### The two application checks — the general lemma reproduces the pins -/
+
+/-- info: 'SocrateAI.ModularForms.etaQuotient_fricke_selfDual_normalized_pin_level_six' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms etaQuotient_fricke_selfDual_normalized_pin_level_six
+
+/-- info: 'SocrateAI.ModularForms.etaQuotient_fricke_selfDual_normalized_pin_level_six_neg' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms etaQuotient_fricke_selfDual_normalized_pin_level_six_neg
+
+end Sdf06
+
+-- STATEMENT PIN (LL-1).  The guard above certifies the PROOF; the pin below certifies the
+-- STATEMENT.  Named rather than anonymous for the same `dag/check_dag.py` reason as the `SDF-05`
+-- statement pin; it proves nothing new.
+--
+-- `SDF-06` longhand, on the same terms as that pin: level a POSITIVE natural (`ℕ+`), point a
+-- bundled `z : ℍ`, exponent vector the bare `ℕ → ℤ`, `IsFrickeSelfDual` UNFOLDED to
+-- `∀ δ ∈ N.divisors, r δ = r (N / δ)`, and both eta quotients written out over `Nat.divisors`
+-- with `ModularForm.eta` fully qualified.  No `frickeEigenvalue` clause is needed here and none
+-- is used: `etaQuotient_fricke_selfDual_normalized` already states its constants as `(√(N^k))⁻¹`,
+-- `z^{-k}` and `i^{-k}`, with no eigenvalue definition to unfold.
+--
+-- What a reader can check by eye: after dividing by the normaliser `√(N^k)` and by `z^k`, the
+-- constant left standing is `i^{-k}`, a fourth root of unity, with the `N`-dependence gone.  It
+-- is gone because `SDF-02` cancelled it, NOT because of anything visible in this line — see the
+-- section docstring above before reporting that cancellation as this node's achievement.
+--
+-- NON-VACUITY CHECKED, not assumed (`scratch_sdfguard/neg/S06_*.lean`).  Five perturbations of
+-- the statement below, each fed this same proof term, all fail to elaborate: `i^{+k}` for
+-- `i^{-k}`, `√(N^{2k})` for `√(N^k)`, `√(N^k)` for `(√(N^k))⁻¹`, `z^{k}` for `z^{-k}`, and the
+-- dual `r (N/δ)` for `r δ` in the right-hand product.
+--
+-- SCOPE -- READ BEFORE CITING.  One identity between two explicit finite products of values of
+-- Mathlib's `ModularForm.eta` on the open upper half-plane.  It says nothing about
+-- `Γ₀(N)`-modularity, nothing at any cusp, and nothing about physics.  It is deliberately NOT
+-- written through Mathlib's `∣[k]` slash: the `GL(2,ℝ)` slash carries a `det^(k-1)` factor, and
+-- the Fricke matrix has determinant `N`, so restating it that way would change the constant.
+section Sdf06StatementPin
+open ModularForm UpperHalfPlane CongruenceSubgroup Matrix Complex
+open scoped MatrixGroups Real
+
+/-- **`SDF-GUARD` — the `SDF-06` STATEMENT pin, longhand.**
+`etaQuotient_fricke_selfDual_normalized` with `EtaExp`, `IsFrickeSelfDual` and `etaQuotient` all
+unfolded, so the normalised relation and its root-of-unity constant `i^{-k}` are readable without
+chasing a SocrateAI definition.  Proves nothing new; see the comment above. -/
+theorem SocrateAI.ModularForms.etaQuotient_fricke_selfDual_normalized_statement_pin :
+    ∀ (N : ℕ+) (r : ℕ → ℤ) (k : ℤ),
+    (∀ δ ∈ (N : ℕ).divisors, r δ = r ((N : ℕ) / δ)) →
+    (∑ δ ∈ (N : ℕ).divisors, r δ) = 2 * k → ∀ z : ℍ,
+    ((Real.sqrt ((((N : ℕ) : ℝ)) ^ k) : ℝ) : ℂ)⁻¹ * (z : ℂ) ^ (-k)
+        * (∏ δ ∈ (N : ℕ).divisors,
+            ModularForm.eta ((δ : ℂ) * (-(1 / (((N : ℕ) : ℂ) * (z : ℂ))))) ^ (r δ))
+      = Complex.I ^ (-k)
+        * ∏ δ ∈ (N : ℕ).divisors, ModularForm.eta ((δ : ℂ) * (z : ℂ)) ^ (r δ) :=
+  fun N _ _ hr hk z =>
+    SocrateAI.ModularForms.etaQuotient_fricke_selfDual_normalized N.pos hr hk z.2
+
+/-- info: 'SocrateAI.ModularForms.etaQuotient_fricke_selfDual_normalized_statement_pin' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in
+#print axioms SocrateAI.ModularForms.etaQuotient_fricke_selfDual_normalized_statement_pin
+
+end Sdf06StatementPin
+
+/-! ### `SDF-07` — integer powers of `i` are `4`-periodic
+
+`I_zpow_emod` (`SocrateAI/ModularForms/EtaQuotientFrickeSelfDual.lean`).  `i^k = i^(k % 4)` for
+`k : ℤ`, with `%` the `Int.emod` of a positive divisor, so the reduced exponent lies in `[0, 4)`
+(`I_zpow_emod_exponent_mem`, guarded below).
+
+WHAT THIS NODE IS.  A fact about `ℂ` alone: `i` has multiplicative order `4`.  It is NOT a
+specialisation of `etaQuotient_fricke` in either direction, and it is not derived from the Fricke
+transformation law — it mentions no eta quotient, no level, no weight and no `z`.  It is auxiliary:
+`i^{-k}` is one factor of `frickeEigenvalue N k`, so this is what will let `SDF-08` and `SDF-09`
+settle when that factor is `±1` by a finite case analysis instead of a fresh computation.
+
+NOT ALREADY IN MATHLIB — re-verified this session by whole-library grep, no `| head` truncation.
+`Complex.I_pow_eq_pow_mod` (`Data/Complex/Basic.lean:633`) is the `ℕ`-exponent version only.  The
+generic `zpow_eq_zpow_emod` (`Algebra/Group/Basic.lean:849`) would have subsumed this, but it sits
+inside `section Group` (`variable [Group G]`, opened at `Algebra/Group/Basic.lean:594` and not closed
+before line 849) and `ℂ` is not a group under multiplication; a whole-Mathlib grep for a
+`GroupWithZero`/`DivisionRing` zpow-emod variant returns nothing.  Hence the proof pays the `I ≠ 0`
+side condition of `zpow_add₀`.
+
+PINS.  Six instance pins, all stated and proved ABOVE the general lemma, each computing its two
+sides by routes that do not meet: the left-hand side through the already sorry-free `I_zpow_*` value
+lemmas of section `SdfDef02Pins` (or, at `k = -15`, through `zpow_neg` and a `ℕ`-power computation),
+the right-hand side by `decide`-reducing `k % 4` to a numeral and evaluating that small power.  All
+81 exponents in `[-40, 40]` were checked outside Lean first, in exact Gaussian-rational arithmetic
+(repeated multiplication for `k ≥ 0`, explicit conjugate/norm inversion for `k < 0`); zero
+mismatches.  `k = 12` is the exponent of `frickeEigenvalue 1 12`, the `N = 1`, `r = (24)` instance
+underlying the sorry-free `eta_S_via_fricke`; `k = -12` is the exponent that actually appears in the
+load-bearing `N = 6` self-dual instance; `k = -2` is the SIGN exponent behind
+`frickeEigenvalue 1 2 = -1`, whose eta-quotient witness is `selfDual_pin_eigenvalue_neg_one`.
+
+`I_zpow_emod_pin_zero` is DEGENERATE and is guarded as such, not as evidence: after its `decide` the
+two sides are the same term, so it constrains nothing.  It is present because the degenerate case is
+part of the required pin set.
+
+NEGATIVE CONTROLS.  `I_zpow_emod_pin_not_mod_two` shows the modulus `4` is load-bearing — at `k = 3`
+a mod-`2` statement would assert `-i = i`, refuted through `Complex.I_im`.
+`I_zpow_emod_pin_nontrivial_reduction` shows the reduction is not the identity map
+(`(-15) % 4 = 1 ≠ -15`), so the node is not a disguised tautology — and its guard below records that
+it depends on NO axioms at all, not even the usual three: it is a closed `decide` on `ℤ`, so the
+kernel evaluates it outright.  Together with
+`I_zpow_emod_pin_neg_one` these also pin `%` as `Int.emod` and not `Int.tmod`: under `tmod` the
+reduced exponent at `k = -1` would be `-1` and that pin would collapse into `i^{-1} = i^{-1}`.
+
+APPLICATION CHECK.  `I_zpow_emod_pin_application` re-states five of the six pinned equations but
+REACHES them by running `I_zpow_emod` at those exponents, so each is proved twice by routes sharing
+no lemma, and they agree.  The `k = -15` conjunct is the informative one — its value is neither `1`
+nor `-1`, so it is invisible to the `±1` bookkeeping of `SDF-08`/`SDF-09`.
+
+All `decide`s in the declarations guarded below are `decide`, never `native_decide`, so no
+`Lean.ofReduceBool` enters any footprint.
+
+NAMING.  `SDF-08`'s forward direction already exists in this library as `I_zpow_neg_eq_one`
+(`EtaQuotientPrimeLevel.lean:630`, sorry-free, same namespace `SocrateAI.ModularForms`).  This file
+imports both that module and `EtaQuotientFrickeSelfDual`, so when `SDF-08` closes it must keep its
+`_iff` suffix or it will collide here.  `I_zpow_emod` itself is a fresh name library-wide
+(grep-verified this session).
+
+PHYSICS SCOPE.  Nothing here formalises any physics.  This node is an identity between two powers of
+`Complex.I`.  It says NOTHING about `Γ₀(N)`, nothing about eta quotients, and nothing about physics.
+Persson–Volpato (arXiv:1504.07260) is cited in the guarded file's docstring as the ORIGIN of the
+question only, at the literature (L) tier; their CHL / axio-dilaton S-duality claim is NOT a Lean
+statement anywhere in this library and must never be reported as one. -/
+
+namespace Sdf07
+
+open SocrateAI.ModularForms
+
+/-! #### The exponent-range companion — what makes `SDF-08`/`SDF-09`'s case analysis exhaustive -/
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_emod_exponent_mem' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_emod_exponent_mem
+
+/-! #### The six instance pins — `SDF-07`'s own equation at concrete exponents -/
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_emod_pin_twelve' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_emod_pin_twelve
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_emod_pin_neg_twelve' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_emod_pin_neg_twelve
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_emod_pin_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_emod_pin_zero
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_emod_pin_neg_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_emod_pin_neg_one
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_emod_pin_neg_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_emod_pin_neg_two
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_emod_pin_neg_fifteen' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_emod_pin_neg_fifteen
+
+/-! #### The negative controls — the modulus, and the non-triviality of the reduction -/
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_emod_pin_not_mod_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_emod_pin_not_mod_two
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_emod_pin_nontrivial_reduction' does not depend on any axioms -/
+#guard_msgs in #print axioms I_zpow_emod_pin_nontrivial_reduction
+
+/-! #### `SDF-07` itself -/
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_emod' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_emod
+
+/-! #### The application check — the general lemma reproduces the pins -/
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_emod_pin_application' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_emod_pin_application
+
+end Sdf07
+
+/-! ### `SDF-08` — `i^{-k} = 1 ↔ 4 ∣ k`  (`EtaQuotientFrickeSelfDual.lean`)
+
+CLOSED this run.  `I_zpow_neg_eq_one_iff (k : ℤ) : (I : ℂ) ^ (-k) = 1 ↔ (4 : ℤ) ∣ k` — the criterion
+for the NORMALISED Fricke eigenvalue of `SDF-06` (`etaQuotient_fricke_selfDual_normalized`, whose
+constant is exactly `i^{-k}`) to be `+1`.
+
+WHAT THIS NODE IS, AND WHAT IT IS NOT — stated here so the guard is not read as more than it is.  It
+is an equivalence between a `ℂ`-valued `zpow` equation and an integer divisibility.  It mentions no
+level `N`, no exponent vector `r`, no point `z` and no eta quotient, and it is NOT a specialisation
+of `etaQuotient_fricke`: that specialisation is `SDF-04` (`etaQuotient_fricke_selfDual_raw`).
+`SDF-08` is downstream of the Fricke work only through the CONSTANT — `i^{-k}` is one factor of
+`frickeEigenvalue N k` — exactly as the `SDF-07` block above says.
+
+PROOF ROUTE.  `SDF-07` (`I_zpow_emod`) reduces the exponent to `(-k) % 4 ∈ {0, 1, 2, 3}`
+(`I_zpow_emod_exponent_mem`, then `omega`); the three non-zero residues are refuted by evaluating
+`i^1`, `i^2` (`Complex.I_sq`) and `i^3` (`pow_succ` ON TOP OF `Complex.I_sq` — `I_sq` alone does not
+reach `i^3`) and comparing one coordinate against `1` (`Complex.I_im`, `Complex.one_re`,
+`Complex.one_im`); `(-k) % 4 = 0 ↔ 4 ∣ k` is inside `omega`'s numeral `emod`/`dvd` fragment, so
+`Int.emod_emod_of_dvd` is not used.  BOTH directions run through `SDF-07`: the converse is NOT a
+reuse of the sorry-free `I_zpow_neg_eq_one` (`EtaQuotientPrimeLevel.lean:630`), which is out of
+scope in `EtaQuotientFrickeSelfDual.lean` — that module and `EtaQuotientPrimeLevel` are siblings,
+both importing `EtaQuotientModularity` and neither importing the other.  THIS file imports both,
+which is why the `_iff` suffix is mandatory: the un-suffixed name is already taken here.
+
+SIX WEIGHT PINS, all stated ABOVE the general lemma so Lean scoping forbids them from using it, and
+each settling its two sides by routes that do not meet — the `ℂ` side through the sorry-free
+`I_zpow_*` value lemmas of section `SdfDef02Pins` (or, at `k = 15`, through
+`I_zpow_emod_pin_neg_fifteen`), the `ℤ` side by `decide`.  The pinned weights are the weights of
+eta-quotient instances already in that file: `k = 12` (`selfDual_eigen_pin_level_one`, the
+`eta_S_via_fricke` instance, and `selfDual_eigen_pin_level_six`), `k = -12`
+(`selfDual_eigen_pin_level_six_neg`), `k = 0` (`selfDual_eigen_pin_zero_exp`), `k = 2`
+(`selfDual_pin_eigenvalue_neg_one`), `k = 1` (`selfDual_eigen_pin_level_four_neg`), and `k = 15`
+(no eta-quotient instance — it is there because its value is neither `1` nor `-1`).
+
+WHICH PINS CARRY WEIGHT.  `..._pin_two` is the load-bearing one: at `k = 2` BOTH sides are false
+(`i^{-2} = -1 ≠ 1`, `4 ∤ 2`), and `k = 2` is the weight of `selfDual_pin_eigenvalue_neg_one` (`η⁴` at
+level one, eigenvalue `-1`), so a statement on the wrong residue class — `2 ∣ k`, or the divisor
+dropped to `2` — would break there and would hand `SDF-09` the wrong sign.  `..._pin_one` and
+`..._pin_fifteen` refute through `Complex.I_im` at NON-REAL values, so they cannot be artefacts of
+`±1` bookkeeping.  `..._pin_zero` is DEGENERATE and is guarded as such, not as evidence: after
+`neg_zero` its left conjunct is `zpow_zero`.
+
+Before any of this was stated in Lean, `i^{-k} = 1 ↔ 4 ∣ k` was checked outside Lean in exact
+Gaussian-integer arithmetic at all 121 weights `k ∈ [-60, 60]` (positive powers by repeated
+multiplication, negative ones by conjugation, since `|i^m| = 1`); zero mismatches.
+
+APPLICATION CHECK.  `I_zpow_neg_eq_one_iff_pin_application` re-derives all six pinned weights by
+RUNNING the general lemma there, so each is settled twice by routes sharing no lemma, and they agree.
+
+All `decide`s in the declarations guarded below are `decide`, never `native_decide`, so no
+`Lean.ofReduceBool` enters any footprint.
+
+PHYSICS SCOPE.  Nothing here formalises any physics.  This node is an equivalence between a power of
+`Complex.I` and a divisibility in `ℤ`.  Persson–Volpato (arXiv:1504.07260) is cited in the guarded
+file's docstring as the ORIGIN of the question only, at the literature (L) tier; their CHL /
+axio-dilaton S-duality claim is NOT a Lean statement anywhere in this library and must never be
+reported as one. -/
+
+namespace Sdf08
+
+open SocrateAI.ModularForms
+
+/-! #### The six weight pins — `SDF-08`'s own biconditional at concrete weights -/
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_eq_one_iff_pin_twelve' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_eq_one_iff_pin_twelve
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_eq_one_iff_pin_neg_twelve' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_eq_one_iff_pin_neg_twelve
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_eq_one_iff_pin_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_eq_one_iff_pin_zero
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_eq_one_iff_pin_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_eq_one_iff_pin_two
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_eq_one_iff_pin_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_eq_one_iff_pin_one
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_eq_one_iff_pin_fifteen' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_eq_one_iff_pin_fifteen
+
+/-! #### `SDF-08` itself -/
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_eq_one_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_eq_one_iff
+
+/-! #### The application check — the general lemma reproduces the pins -/
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_eq_one_iff_pin_application' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_eq_one_iff_pin_application
+
+end Sdf08
+
+/-! ### `SDF-09` — `i^{-k} = -1 ↔ k % 4 = 2`  (`EtaQuotientFrickeSelfDual.lean`)
+
+CLOSED this run.  `I_zpow_neg_eq_neg_one_iff (k : ℤ) : (I : ℂ) ^ (-k) = -1 ↔ k % 4 = 2` — the
+criterion for the NORMALISED Fricke eigenvalue of `SDF-06`
+(`etaQuotient_fricke_selfDual_normalized`, whose constant is exactly `i^{-k}`) to be `-1`, i.e. for a
+Fricke-self-dual eta quotient of weight `k` to be a `(-1)`-eigenform of the normalised involution.
+
+WHY IT IS A NODE OF ITS OWN, and not a conjunct of `SDF-08`.  The SIGN of the eigenvalue is exactly
+the quantity a sign error corrupts, so it gets its own node and its own guard: a sign regression then
+shows up in the DAG rather than inside somebody else's conjunction.  The independently computed
+instance it answers to is `selfDual_pin_eigenvalue_neg_one` (`η⁴` at level one, weight two,
+eigenvalue `-1`, computed by hand from `η(-1/z)⁴ = (-i z)² η(z)⁴ = -z² η(z)⁴`) together with
+`frickeEigenvalue_pin_neg_one` — both already sorry-free and guarded in earlier sections.
+
+WHAT THIS NODE IS, AND WHAT IT IS NOT.  It is an equivalence between a `ℂ`-valued `zpow` equation and
+an integer congruence.  It mentions no level `N`, no exponent vector `r`, no point `z` and no eta
+quotient, and it is NOT a specialisation of `etaQuotient_fricke` — no substitution into that theorem
+produces it, since `i^{-k}` occurs there only as an opaque subterm of the scalar and that theorem
+makes no claim about when the subterm is `-1`.  That specialisation is `SDF-04`.  `SDF-09` is
+downstream of the Fricke work only through the CONSTANT: `i^{-k}` is one factor of
+`frickeEigenvalue N k`.  (The statement comparator for this node was pointed at `etaQuotient_fricke`
+and correctly returned NO_REFERENCE for exactly this reason; the real dependency is `SDF-07`.)
+
+PROOF ROUTE.  `SDF-07` (`I_zpow_emod`) reduces the exponent to `(-k) % 4 ∈ {0, 1, 2, 3}`
+(`Int.emod_nonneg`, `Int.emod_lt_of_pos`, then `omega`).  Three residues are refuted by evaluating the
+power and comparing ONE coordinate against `-1`: `i^0 = 1` through `Complex.one_re`/`Complex.neg_re`,
+`i^1 = i` and `i^3 = -i` through `Complex.I_im` (`i^3` needs `pow_succ` ON TOP OF `Complex.I_sq` —
+`I_sq` alone does not reach it).  The surviving residue `(-k) % 4 = 2` gives the value `-1` by
+`Complex.I_sq`, and `(-k) % 4 = 2 ↔ k % 4 = 2` is `omega`'s numeral-`emod` fragment, isolated as the
+separately guarded `I_zpow_neg_eq_neg_one_iff_emod_neg` so it can be inspected on its own.
+`Complex.ext_iff` (which this node's `built_from` named) is NOT used, and neither is
+`Int.emod_emod_of_dvd`.
+
+SIX WEIGHT PINS, all stated ABOVE the general lemma so Lean scoping forbids them from using it, each
+settling its two sides by routes that do not meet — the `ℂ` side through the sorry-free `I_zpow_*`
+value lemmas of section `SdfDef02Pins` (or, at `k = 15`, through `I_zpow_emod_pin_neg_fifteen`), the
+`ℤ` side by `decide`.  `k = 12` (`selfDual_eigen_pin_level_one`, the `eta_S_via_fricke` instance, and
+the `N = 6` instance `selfDual_eigen_pin_level_six`), `k = -12` (`selfDual_eigen_pin_level_six_neg`),
+`k = 0` (`selfDual_eigen_pin_zero_exp`), `k = 2` (`selfDual_pin_eigenvalue_neg_one`), `k = -2`, and
+`k = 15` (no eta-quotient instance — it is there because its value is neither `1` nor `-1`).
+
+WHICH PINS CARRY WEIGHT.  `..._pin_two` is the load-bearing one and the ONLY pin here at which both
+sides are TRUE: `i^{-2} = -1` and `2 % 4 = 2`, at the weight of `selfDual_pin_eigenvalue_neg_one`, so
+a statement on the wrong residue class — `4 ∣ k`, i.e. `SDF-08`'s class — would contradict
+`I_zpow_neg_two` there.  `..._pin_neg_two` is the `emod` pin: both sides true at a NEGATIVE weight,
+reached through `Complex.I_sq` rather than `I_zpow_neg_two`, so PIN D and PIN E agree without sharing
+a route.  `..._pin_fifteen` refutes through `Complex.I_im` at the non-real value `i`, so it cannot be
+an artefact of `±1` bookkeeping.  `..._pin_zero` is DEGENERATE and is guarded as such, not as
+evidence: after `neg_zero` its left conjunct is `zpow_zero`.
+
+TWO NEGATIVE CONTROLS.  `..._pin_k_not_neg_k` shows that `k % 4` and `(-k) % 4` are DIFFERENT
+functions (`1 % 4 = 1` but `(-1) % 4 = 3`; `15 % 4 = 3` but `(-15) % 4 = 1`), so stating the
+right-hand side on the weight `k` rather than on the exponent `-k` is a real choice and not a
+notational one — what makes both forms true is only their agreement on the single residue class `2`.
+`..._pin_emod_not_tmod` shows the `emod`/`tmod` distinction is load-bearing: `(-2) % 4 = 2` while
+`Int.tmod (-2) 4 = -2`, so under a truncating remainder PIN E would be FALSE and the node would fail
+at every negative weight in the class where the eigenvalue actually is `-1`.
+
+Before any of this was stated in Lean, `i^{-k} = -1 ↔ k % 4 = 2` was checked outside Lean in exact
+Gaussian-integer arithmetic at all 401 weights `k ∈ [-200, 200]` (positive powers by repeated
+multiplication, negative ones by conjugation since `|i^m| = 1`, `%` as `Int.emod`); zero mismatches.
+
+APPLICATION CHECK.  `I_zpow_neg_eq_neg_one_iff_pin_application` re-derives all six pinned weights by
+RUNNING the general lemma there, so each is settled twice by routes sharing no lemma, and they agree.
+
+All `decide`s in the declarations guarded below are `decide`, never `native_decide`, so no
+`Lean.ofReduceBool` enters any footprint.
+
+PHYSICS SCOPE.  Nothing here formalises any physics.  This node is an equivalence between a power of
+`Complex.I` and a congruence in `ℤ`.  Persson–Volpato (arXiv:1504.07260) is cited in the guarded
+file's docstring as the ORIGIN of the question only, at the literature (L) tier; their CHL /
+axio-dilaton S-duality claim is NOT a Lean statement anywhere in this library and must never be
+reported as one. -/
+
+namespace Sdf09
+
+open SocrateAI.ModularForms
+
+/-! #### The six weight pins — `SDF-09`'s own biconditional at concrete weights -/
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_eq_neg_one_iff_pin_twelve' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_eq_neg_one_iff_pin_twelve
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_eq_neg_one_iff_pin_neg_twelve' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_eq_neg_one_iff_pin_neg_twelve
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_eq_neg_one_iff_pin_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_eq_neg_one_iff_pin_zero
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_eq_neg_one_iff_pin_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_eq_neg_one_iff_pin_two
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_eq_neg_one_iff_pin_neg_two' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_eq_neg_one_iff_pin_neg_two
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_eq_neg_one_iff_pin_fifteen' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_eq_neg_one_iff_pin_fifteen
+
+/-! #### The two negative controls — the `k`/`-k` and `emod`/`tmod` hazards -/
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_eq_neg_one_iff_pin_k_not_neg_k' does not depend on any axioms -/
+#guard_msgs in #print axioms I_zpow_neg_eq_neg_one_iff_pin_k_not_neg_k
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_eq_neg_one_iff_pin_emod_not_tmod' does not depend on any axioms -/
+#guard_msgs in #print axioms I_zpow_neg_eq_neg_one_iff_pin_emod_not_tmod
+
+/-! #### The `k`/`-k` bridge used by the general proof -/
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_eq_neg_one_iff_emod_neg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_eq_neg_one_iff_emod_neg
+
+/-! #### `SDF-09` itself -/
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_eq_neg_one_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_eq_neg_one_iff
+
+/-! #### The application check — the general lemma reproduces the pins -/
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_eq_neg_one_iff_pin_application' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_eq_neg_one_iff_pin_application
+
+end Sdf09
+
+/-! ### `SDF-10` — `(N : ℝ)^k = 1 ↔ (N = 1 ∨ k = 0)`  (`EtaQuotientFrickeSelfDual.lean`)
+
+CLOSED this run.  `natCast_zpow_eq_one_iff {N : ℕ} (hN : 0 < N) (k : ℤ) : (N : ℝ) ^ k = 1 ↔
+(N = 1 ∨ k = 0)` — the MODULUS half of the `±1` classification.  `SDF-08` and `SDF-09` settled the
+root of unity `i^{-k}` in `frickeEigenvalue N k`; this settles the other factor, the positive real
+`√(N^k)`, by settling `N^k`.  It is what rules out any `N > 1` with `k ≠ 0` in `SDF-12`/`SDF-13`.
+
+WHAT THIS NODE IS, AND WHAT IT IS NOT.  It is an equivalence between a `zpow` equation in `ℝ` and a
+disjunction of two decidable conditions on `(N, k)`.  It mentions no exponent vector `r`, no point
+`z`, no eta quotient and no `Complex.I`, and it is NOT a specialisation of `etaQuotient_fricke` — no
+substitution into that theorem produces it, since `N^k` occurs there only inside the opaque scalar
+and that theorem makes no claim about when the scalar's modulus is `1`.  That specialisation is
+`SDF-04`.  (The statement comparator for this node was pointed at `etaQuotient_fricke` and correctly
+returned NO_REFERENCE for exactly that reason; the real reference is Mathlib's
+`zpow_eq_one_iff_right₀`, `Algebra/Order/GroupWithZero/Basic.lean:1357`, whose `a ≠ 1` hypothesis
+this node trades for the extra disjunct `N = 1`.)
+
+PROOF ROUTE.  Split on `N = 1`: there `Nat.cast_one` and `one_zpow` make the left side `1 = 1` at
+EVERY integer exponent, and the left disjunct supplies the right side.  Otherwise `(N : ℝ) ≠ 1` by
+injectivity of the cast, and `zpow_eq_one_iff_right₀ (Nat.cast_nonneg N)` reduces the goal to
+`k = 0 ↔ (N = 1 ∨ k = 0)`, closed by `Or.resolve_left`.
+
+SIX INSTANCE PINS plus a two-route value check, all stated ABOVE the general lemma so Lean scoping
+forbids them from using it, and all tied to eta-quotient instances this file already has:
+`(N, k) = (1, 12)` (the `eta_S_via_fricke` instance, `selfDual_eigen_pin_level_one`), `(6, 12)` (the
+genuine `N > 1` self-dual instance `rPinSix`, `selfDual_eigen_pin_level_six`), `(6, 0)` (the
+degenerate `r ≡ 0` case, `selfDual_eigen_pin_zero_exp`), `(4, 1)` (odd weight,
+`selfDual_eigen_pin_level_four_neg`), `(6, -12)` (negative weight,
+`selfDual_eigen_pin_level_six_neg`), and `(1, -12)`.
+
+WHICH PINS CARRY WEIGHT.  `..._pin_level_six` is the load-bearing one and the reason the node exists:
+BOTH sides FALSE at a real `N > 1` Fricke-self-dual eta quotient, which is what makes `SDF-12` and
+`SDF-13` sharp rather than vacuous.  `..._pin_level_six_neg` is the one that sees the SIGN of `k`:
+there the power is the proper fraction `1/2176782336`, not an integer, so a statement or proof that
+read `zpow` as `Monoid.npow` would break there — on live content, since this file has a self-dual
+instance at that level and weight.  `..._pin_level_one` and `..._pin_zero_weight` are the two pins
+that force the right-hand side to carry a level clause and a weight clause respectively.
+`..._pin_zero_weight` is DEGENERATE and is guarded as such, not as evidence: its left conjunct is
+`zpow_zero`.
+
+PIN B's VALUE, CHECKED TWICE.  `natCast_zpow_pin_level_six_value` computes `6^12 = 2176782336` by
+`norm_num`.  `natCast_zpow_pin_level_six_routes_agree` reaches the same number a second way, by
+squaring the already sorry-free `sqrt_natPow_level_six` (`√(6^12) = 46656`, section `Sdf03Pins`, the
+lemma `fricke_const_pin_level_six` and `frickeEigenvalue_pin_level_six` are built on) through
+`Real.sq_sqrt`, then records `46656² = 2176782336`.  So the modulus this node rules out and the
+modulus `SDF-03` computed are the same number, and a disagreement fails the build here rather than
+surfacing downstream.
+
+TWO NEGATIVE CONTROLS, ONE PER DISJUNCT, showing NEITHER is droppable.
+`..._pin_not_weight_only` exhibits `1^12 = 1` with `12 ≠ 0`, refuting the strengthened form
+`(N : ℝ)^k = 1 ↔ k = 0` — which is Mathlib's `zpow_eq_one_iff_right₀` read WITHOUT its `a ≠ 1`
+hypothesis — and refuting it at the `eta_S_via_fricke` instance.  `..._pin_not_level_only` exhibits
+`6^0 = 1` with `6 ≠ 1`, refuting `(N : ℝ)^k = 1 ↔ N = 1`.  Together they also refute the conjunctive
+form `N = 1 ∧ k = 0`.  The disjunction is therefore exactly right, not merely sufficient.
+
+`hN` IS REDUNDANT, AND THAT IS PINNED RATHER THAN GLOSSED.
+`..._pin_hypothesis_redundant` proves the SAME biconditional at `N = 0`, at a positive, a negative
+and a zero weight, via `zero_zpow_eq_one₀`.  `hN` is kept anyway and is deliberately UNUSED in the
+proof, only so this lemma's shape matches `SDF-12` and `SDF-13`, which need it.  A future reader must
+not infer from its presence that the statement fails at `N = 0`.
+
+Before any of this was stated in Lean, `N^k = 1 ↔ (N = 1 ∨ k = 0)` was checked outside Lean in exact
+rational arithmetic (no floating point) at all 20301 instances `N ∈ [0, 100]`, `k ∈ [-100, 100]`,
+with the `N = 0` row evaluated under Lean's convention `(0 : ℝ)⁻¹ = 0`; zero mismatches.
+
+APPLICATION CHECK.  `natCast_zpow_eq_one_iff_pin_application` re-derives all six pinned `(N, k)` by
+RUNNING the general lemma there, so each is settled twice by routes sharing no lemma, and they agree.
+
+All `decide`s in the declarations guarded below are `decide`, never `native_decide`, so no
+`Lean.ofReduceBool` enters any footprint.
+
+PHYSICS SCOPE.  Nothing here formalises any physics.  This node is an equivalence between a power of
+a cast natural in `ℝ` and a disjunction of two arithmetic conditions.  Persson–Volpato
+(arXiv:1504.07260) is cited in the guarded file's docstring as the ORIGIN of the question only, at
+the literature (L) tier; their CHL / axio-dilaton S-duality claim is NOT a Lean statement anywhere in
+this library and must never be reported as one. -/
+
+namespace Sdf10
+
+open SocrateAI.ModularForms
+
+/-! #### The six instance pins — `SDF-10`'s two sides at concrete `(N, k)` -/
+
+/-- info: 'SocrateAI.ModularForms.natCast_zpow_eq_one_iff_pin_level_one' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms natCast_zpow_eq_one_iff_pin_level_one
+
+/-- info: 'SocrateAI.ModularForms.natCast_zpow_eq_one_iff_pin_level_six' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms natCast_zpow_eq_one_iff_pin_level_six
+
+/-- info: 'SocrateAI.ModularForms.natCast_zpow_eq_one_iff_pin_zero_weight' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms natCast_zpow_eq_one_iff_pin_zero_weight
+
+/-- info: 'SocrateAI.ModularForms.natCast_zpow_eq_one_iff_pin_level_four' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms natCast_zpow_eq_one_iff_pin_level_four
+
+/-- info: 'SocrateAI.ModularForms.natCast_zpow_eq_one_iff_pin_level_six_neg' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms natCast_zpow_eq_one_iff_pin_level_six_neg
+
+/-- info: 'SocrateAI.ModularForms.natCast_zpow_eq_one_iff_pin_level_one_neg' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms natCast_zpow_eq_one_iff_pin_level_one_neg
+
+/-! #### The pinned values, and PIN B's second route through `SDF-03`'s `√(6^12) = 46656` -/
+
+/-- info: 'SocrateAI.ModularForms.natCast_zpow_pin_level_six_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms natCast_zpow_pin_level_six_value
+
+/-- info: 'SocrateAI.ModularForms.natCast_zpow_pin_level_six_routes_agree' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms natCast_zpow_pin_level_six_routes_agree
+
+/-- info: 'SocrateAI.ModularForms.natCast_zpow_pin_level_four_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms natCast_zpow_pin_level_four_value
+
+/-- info: 'SocrateAI.ModularForms.natCast_zpow_pin_level_six_neg_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms natCast_zpow_pin_level_six_neg_value
+
+/-! #### The two negative controls — neither disjunct of the right-hand side is droppable -/
+
+/-- info: 'SocrateAI.ModularForms.natCast_zpow_eq_one_iff_pin_not_weight_only' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms natCast_zpow_eq_one_iff_pin_not_weight_only
+
+/-- info: 'SocrateAI.ModularForms.natCast_zpow_eq_one_iff_pin_not_level_only' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms natCast_zpow_eq_one_iff_pin_not_level_only
+
+/-! #### The hypothesis-redundancy pin — the biconditional also holds at `N = 0` -/
+
+/-- info: 'SocrateAI.ModularForms.natCast_zpow_eq_one_iff_pin_hypothesis_redundant' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms natCast_zpow_eq_one_iff_pin_hypothesis_redundant
+
+/-! #### `SDF-10` itself -/
+
+/-- info: 'SocrateAI.ModularForms.natCast_zpow_eq_one_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms natCast_zpow_eq_one_iff
+
+/-! #### The application check — the general lemma reproduces the pins -/
+
+/-- info: 'SocrateAI.ModularForms.natCast_zpow_eq_one_iff_pin_application' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms natCast_zpow_eq_one_iff_pin_application
+
+end Sdf10
+
+/-! ### `SDF-11` — `‖frickeEigenvalue N k‖ = √((N : ℝ)^k)`
+
+`SDF-11` (`frickeEigenvalue_norm`, `EtaQuotientFrickeSelfDual.lean`) is CLOSED, and every
+declaration that closes it is guarded here.  The statement is
+
+`‖frickeEigenvalue N k‖ = Real.sqrt ((N : ℝ)^k)`  for `0 < N`,
+
+the MODULUS of the unnormalised Fricke eigenvalue in closed form.  `frickeEigenvalue N k` is
+`i^{-k} · √(N^k)` (`SDF-DEF-02`), a fourth root of unity times a NON-NEGATIVE real, so the norm
+discards the `i`-factor and returns the real one.  This is the node that makes the `±1`
+classification of `SDF-12`/`SDF-13` split cleanly into an ARGUMENT condition (`SDF-08`/`SDF-09`) and
+a MODULUS condition (`SDF-10`).
+
+SIX INSTANCE PINS, each computing BOTH sides by routes sharing no lemma — the left through
+`SDF-DEF-02`'s `frickeEigenvalue_pin_*` value lemmas, the right through `SDF-03`'s `sqrt_natPow_*`
+radicand lemmas — and all stated ABOVE the general lemma, so Lean scoping forbids them from using
+it: `(1, 12)` the `eta_S_via_fricke` instance; `(6, 12)` the genuine `N > 1` self-dual instance
+`rPinSix` (LOAD-BEARING); `(6, 0)` the degenerate `r ≡ 0` case; `(2, 1)` odd weight with both sides
+IRRATIONAL; `(1, 2)` the `η⁴` instance where the eigenvalue is `-1`; `(6, -12)` NEGATIVE weight,
+where the modulus is the proper fraction `1/46656`.
+
+THREE NEGATIVE CONTROLS.  `..._pin_not_natPow` refutes the dropped-square-root reading
+`‖frickeEigenvalue N k‖ = (N : ℝ)^k` at `(6, 12)`, where the modulus is `46656` and
+`6^12 = 2176782336` — and it takes that second number from `SDF-10`'s already sorry-free
+`natCast_zpow_pin_level_six_value`, so the two nodes agree on it or the build fails.
+`..._pin_not_eigenvalue` records that at `(1, 2)` the modulus `1` differs from the eigenvalue `-1`,
+so this node must NOT be read as a closed form for `frickeEigenvalue` itself — it gives the SIZE
+only, and `SDF-08`/`SDF-09` remain what settle the argument.  `..._pin_nonconstant` records
+`‖frickeEigenvalue 6 12‖ ≠ ‖frickeEigenvalue 1 12‖` at the SAME weight, so the right-hand side
+genuinely depends on the level and the unnormalised eigenvalue is not a root of unity in general.
+
+`hN` IS REDUNDANT, AND THAT IS PINNED RATHER THAN GLOSSED.
+`..._pin_hypothesis_redundant` proves the SAME equation at `N = 0`, at a negative, a zero and a
+positive weight.  `hN` is kept anyway and is deliberately UNUSED in the proof — with
+`set_option linter.unusedVariables false in` on that declaration alone, for that documented reason —
+only so this lemma's shape matches `SDF-10`, `SDF-12` and `SDF-13`.
+
+APPLICATION CHECK.  `frickeEigenvalue_norm_pin_application` re-derives all six pinned `(N, k)` by
+RUNNING the general lemma there, so each is settled twice by routes sharing no lemma, and they
+agree.
+
+All `decide`s in the declarations guarded below are `decide`, never `native_decide`, so no
+`Lean.ofReduceBool` enters any footprint.
+
+RENUMBERING RECEIPT.  `frickeEigenvalue_eq_one_iff` and `frickeEigenvalue_eq_neg_one_iff` were
+labelled `SDF-11`/`SDF-12` by an earlier run working from a TRUNCATED specification, which recorded
+in their docstrings that the labels were a guess.  The real `SDF-11` is `frickeEigenvalue_norm`,
+guarded here; those two were renumbered to `SDF-12`/`SDF-13` in the same commit.  `SDF-12`
+(`frickeEigenvalue_eq_one_iff`) has SINCE been confirmed by the orchestrating session — character for
+character, `hN` included — and is now proved and guarded in section `Sdf12` below.  `SDF-13`
+(`frickeEigenvalue_eq_neg_one_iff`) has SINCE been confirmed the same way and is proved and guarded
+in section `Sdf13` below; this sentence called it "still an UNCONFIRMED reconstruction and still
+OPEN with no guard" until that run.  No reconstructed statement remains.
+
+PHYSICS SCOPE.  Nothing here formalises any physics.  This node is the modulus of a complex number.
+Persson–Volpato (arXiv:1504.07260) is cited in the guarded file's docstring as the ORIGIN of the
+question only, at the literature (L) tier; their CHL / axio-dilaton S-duality claim is NOT a Lean
+statement anywhere in this library and must never be reported as one. -/
+
+namespace Sdf11
+
+open SocrateAI.ModularForms
+
+/-! #### The six instance pins — both sides of `SDF-11` at concrete `(N, k)` -/
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_norm_pin_level_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_norm_pin_level_one
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_norm_pin_level_six' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_norm_pin_level_six
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_norm_pin_zero_weight' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_norm_pin_zero_weight
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_norm_pin_level_two_weight_one' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_norm_pin_level_two_weight_one
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_norm_pin_neg_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_norm_pin_neg_one
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_norm_pin_level_six_neg' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_norm_pin_level_six_neg
+
+/-! #### The three negative controls — dropped root, sign, and level-dependence -/
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_norm_pin_not_natPow' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_norm_pin_not_natPow
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_norm_pin_not_eigenvalue' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_norm_pin_not_eigenvalue
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_norm_pin_nonconstant' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_norm_pin_nonconstant
+
+/-! #### The hypothesis-redundancy pin — the equation also holds at `N = 0` -/
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_norm_pin_hypothesis_redundant' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_norm_pin_hypothesis_redundant
+
+/-! #### `SDF-11` itself -/
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_norm' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_norm
+
+/-! #### The application check — the general lemma reproduces the pins -/
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_norm_pin_application' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_norm_pin_application
+
+end Sdf11
+
+/-! ### `SDF-12` — `frickeEigenvalue N k = 1 ↔ (4 ∣ k ∧ (N = 1 ∨ k = 0))`
+
+`SDF-12` (`frickeEigenvalue_eq_one_iff`, `EtaQuotientFrickeSelfDual.lean`) is CLOSED, and every
+declaration that closes it is guarded here.  The statement is
+
+`frickeEigenvalue N k = 1 ↔ ((4 : ℤ) ∣ k ∧ (N = 1 ∨ k = 0))`  for `0 < N`,
+
+i.e. the unnormalised Fricke eigenvalue `λ = i^{-k} · √(N^k)` (`SDF-DEF-02`) is `1` exactly when BOTH
+of its factors are: the fourth root of unity by `SDF-08`, the modulus by `SDF-11` + `Real.sqrt_eq_one`
++ `SDF-10`.  This is the first node in the `SDF-*` block that pins the EIGENVALUE ITSELF to a
+constant rather than its modulus or one of its factors.
+
+WHAT THIS NODE IS NOT.  It is a fact about a SCALAR — no exponent vector `r`, no point `z`, no eta
+quotient, no `IsFrickeSelfDual` hypothesis — and it is NOT a specialisation of `etaQuotient_fricke`.
+That specialisation is `SDF-04`/`SDF-05`.  The statement comparator for this node was pointed at
+`etaQuotient_fricke` and correctly returned NO_REFERENCE for exactly that reason, as it did for
+`SDF-10` and `SDF-11`.
+
+SIX INSTANCE PINS, all stated ABOVE the general lemma so Lean scoping forbids them from using it, and
+all reaching the left-hand side through `SDF-DEF-02`'s `frickeEigenvalue_pin_*` value lemmas rather
+than through the biconditional: `(1, 12)` the `eta_S_via_fricke` instance, both sides TRUE with the
+level clause firing at a NON-zero weight; `(6, 12)` the genuine `N > 1` self-dual instance `rPinSix`
+(LOAD-BEARING — both sides FALSE while `4 ∣ 12` HOLDS, so it is the pin that forces the second
+conjunct to exist); `(6, 0)` the degenerate `r ≡ 0` case, both sides TRUE at a level that is not `1`;
+`(2, 1)` odd weight, `λ = -(i√2)`, refuted through its modulus; `(1, 2)` the `η⁴` instance where
+`λ = -1` — modulus `1`, so the SIGN CONTROL, the pin that forces the FIRST conjunct to exist;
+`(6, -12)` NEGATIVE weight, `λ = 1/46656`, where a proof assuming `0 ≤ k` breaks.
+
+TWO NEGATIVE CONTROLS, one per conjunct.  `..._pin_not_level_only` exhibits `(1, 2)` with the level
+clause TRUE and `λ = -1 ≠ 1`, refuting the weakened `λ = 1 ↔ (N = 1 ∨ k = 0)` — i.e. `SDF-10` alone
+does not settle this node.  `..._pin_not_dvd_only` exhibits `(6, 12)` with `4 ∣ 12` and
+`λ = 46656 ≠ 1`, refuting the weakened `λ = 1 ↔ 4 ∣ k` — i.e. `SDF-08` alone does not either.  So the
+conjunction is exactly right, not merely sufficient.
+
+`hN` IS REDUNDANT, AND THAT IS PINNED RATHER THAN GLOSSED.  `..._pin_hypothesis_redundant` proves the
+SAME biconditional at `N = 0` at three weights, including `k = -4` where `4 ∣ k` HOLDS and the
+biconditional survives only because the second conjunct fails.  Unlike in `SDF-10` and `SDF-11`, `hN`
+IS syntactically used in `SDF-12`'s proof — it is passed to those two lemmas, which ignore it in turn
+— so no `linter.unusedVariables` suppression is needed here.  It is kept for shape-uniformity with
+`SDF-10`, `SDF-11` and `SDF-13`.
+
+WHICH SQUARE-ROOT LEMMA.  The proof uses Mathlib's UNCONDITIONAL `Real.sqrt_eq_one`
+(`Analysis/Real/Sqrt.lean:172`, `√x = 1 ↔ x = 1`), NOT `Real.sq_sqrt`, which would require
+`0 ≤ (N : ℝ)^k` as a side goal and a `zpow_pos` detour.  No positivity fact about `N` is used
+anywhere in the proof; that is why `hN` can be redundant.
+
+OUT-OF-LEAN CHECK, recorded as evidence about the STATEMENT.  Before it was proved, the biconditional
+was checked in exact rational arithmetic (`fractions.Fraction`, no floating point) at all `12221`
+instances `N ∈ [0, 100]`, `k ∈ [-60, 60]`, with the `N = 0` row under Lean's conventions
+`(0 : ℝ)^k = 0` for `k ≠ 0` and `√0 = 0`.  Zero mismatches.
+
+APPLICATION CHECK.  `frickeEigenvalue_eq_one_iff_pin_application` re-derives all six pinned `(N, k)`
+by RUNNING the general lemma there, so each is settled twice by routes sharing no lemma below
+`SDF-DEF-02`, and they agree.
+
+RECONSTRUCTION RECEIPT.  This declaration's statement was originally reconstructed by a run working
+from a TRUNCATED specification (see the RENUMBERING RECEIPT in section `Sdf11`'s docstring above).
+The orchestrating session has since supplied `SDF-12` in full and the supplied text agrees with the
+declaration CHARACTER FOR CHARACTER, `hN` included, so the reconstruction is CONFIRMED and this node
+may be reported as a specified node.  Its sibling `SDF-13` (`frickeEigenvalue_eq_neg_one_iff`) has
+SINCE been confirmed the same way and is proved and guarded in section `Sdf13` below; this sentence
+said it "has NOT been confirmed, remains a reconstruction, remains OPEN and carries no guard" until
+that run.
+
+All `decide`s in the declarations guarded below are `decide`, never `native_decide`, so no
+`Lean.ofReduceBool` enters any footprint.
+
+PHYSICS SCOPE.  Nothing here formalises any physics.  This node says when a complex number attached
+to a level and a weight equals `1`.  Persson–Volpato (arXiv:1504.07260) is cited in the guarded
+file's docstring as the ORIGIN of the question only, at the literature (L) tier; their CHL /
+axio-dilaton S-duality claim is NOT a Lean statement anywhere in this library and must never be
+reported as one. -/
+
+namespace Sdf12
+
+open SocrateAI.ModularForms
+
+/-! #### The six instance pins — both sides of `SDF-12` at concrete `(N, k)` -/
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_one_iff_pin_level_one' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_one_iff_pin_level_one
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_one_iff_pin_level_six' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_one_iff_pin_level_six
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_one_iff_pin_zero_weight' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_one_iff_pin_zero_weight
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_one_iff_pin_level_two_weight_one' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_one_iff_pin_level_two_weight_one
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_one_iff_pin_neg_one' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_one_iff_pin_neg_one
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_one_iff_pin_level_six_neg' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_one_iff_pin_level_six_neg
+
+/-! #### The two negative controls — one per conjunct of the right-hand side -/
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_one_iff_pin_not_level_only' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_one_iff_pin_not_level_only
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_one_iff_pin_not_dvd_only' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_one_iff_pin_not_dvd_only
+
+/-! #### The hypothesis-redundancy pin — the biconditional also holds at `N = 0` -/
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_one_iff_pin_hypothesis_redundant' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_one_iff_pin_hypothesis_redundant
+
+/-! #### `SDF-12` itself -/
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_one_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_one_iff
+
+/-! #### The application check — the general lemma reproduces the pins -/
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_one_iff_pin_application' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_one_iff_pin_application
+
+end Sdf12
+
+/-! ### `SDF-13` — `frickeEigenvalue N k = -1 ↔ (k % 4 = 2 ∧ N = 1)`
+
+`frickeEigenvalue N k = -1 ↔ (k % 4 = 2 ∧ N = 1)` for `0 < N`.  The sibling of `SDF-12` at the OTHER
+value: the unnormalised eigenvalue `λ = i^{-k} · √(N^k)` is `-1` exactly when the ROOT OF UNITY is
+`-1` (`SDF-09`) and the MODULUS is `1` (`SDF-11` + `Real.sqrt_eq_one` + `SDF-10`).
+
+WHY THE RIGHT-HAND SIDE IS NOT `SDF-12`'s WITH `1` REPLACED BY `-1`.  `SDF-12` reads
+`(4 ∣ k ∧ (N = 1 ∨ k = 0))`; this node reads `(k % 4 = 2 ∧ N = 1)`, with the `k = 0` disjunct GONE —
+because `k % 4 = 2` already forces `k ≠ 0`, so `SDF-10`'s second disjunct cannot fire and the level
+condition SHARPENS to `N = 1`.  That is machine-checked, not asserted:
+`frickeEigenvalue_eq_neg_one_iff_pin_asymmetry` proves the `SDF-12`-shaped right-hand side equivalent
+to the one used here for EVERY `N` and `k`, and exhibits `(6, 0)` where `SDF-12`'s right-hand side is
+TRUE and this node's is FALSE — so the two nodes are genuinely different statements.  That pin is
+also the only declaration guarded in this section whose footprint is `[propext, Quot.sound]` with NO
+`Classical.choice`: it is pure `omega` and constructor logic, and the guard below records that
+smaller footprint rather than pasting the section's usual triple.
+
+THREE VALUE PINS THIS NODE ADDS, because `SDF-DEF-02`'s six do not cover the instances it needs.
+`I_zpow_two` (`i^{2} = -1`, the integer-exponent form, needed for `i^{-k}` at `k = -2`),
+`frickeEigenvalue_pin_level_six_weight_two` (`λ = -6` at `(6, 2)`) and
+`frickeEigenvalue_pin_level_one_weight_neg_two` (`λ = -1` at `(1, -2)`).
+
+EIGHT INSTANCE PINS, all stated ABOVE the general lemma so Lean scoping forbids them from using it.
+`(1, 12)` the `eta_S_via_fricke` instance, BOTH sides FALSE with the LEVEL clause TRUE — `λ = 1` and
+`12 % 4 = 0`, which is what forces the residue conjunct to exist; `(6, 12)` the genuine `N > 1`
+self-dual instance `rPinSix = (1, 11, 11, 1)`, both sides FALSE; `(6, 0)` the DEGENERATE `r ≡ 0`
+case, both sides FALSE — and note it is FALSE here where the `SDF-12` pin at the same `(N, k)` is
+TRUE, which is the dropped `k = 0` disjunct made visible at an instance; `(2, 1)` ODD weight,
+`λ = -(i√2)`, refuted through its modulus `√2`, left symbolic; `(1, 2)` the LOAD-BEARING pin and one
+of only two where BOTH sides are TRUE — `λ = -1`, `2 % 4 = 2`, `N = 1`; `(6, -12)` NEGATIVE weight,
+`λ = 1/46656`, where a proof assuming `0 ≤ k` breaks; `(6, 2)` THE LEVEL CONTROL and the pin `SDF-12`
+has no analogue of — the residue clause HOLDS, so the root of unity IS `-1`, and yet `λ = -6` because
+the modulus `√(6²) = 6` is not `1`, the only pin at which the two conjuncts disagree; and `(1, -2)`
+BOTH sides TRUE at a NEGATIVE weight, the `emod` pin.
+
+THREE NEGATIVE CONTROLS.  `..._pin_not_level_only` exhibits `(1, 12)` with `N = 1` TRUE and
+`λ = 1 ≠ -1`, refuting the weakened `λ = -1 ↔ N = 1` — i.e. `SDF-10` alone does not settle this node.
+`..._pin_not_emod_only` exhibits `(6, 2)` with `2 % 4 = 2` and `λ = -6 ≠ -1`, refuting the weakened
+`λ = -1 ↔ k % 4 = 2` — i.e. `SDF-09` alone does not either.  So the conjunction is exactly right,
+not merely sufficient.  `..._pin_emod_not_tmod` records `(-2) % 4 = 2` beside `Int.tmod (-2) 4 = -2`
+TOGETHER WITH the eigenvalue `-1` at `(1, -2)`, so "Lean's `%` is `Int.emod`" is a checked fact of
+THIS node — on the eigenvalue, not only on the root of unity as in `SDF-09` — rather than an
+assumption inherited from upstream.  Under a truncating remainder `SDF-13` would be FALSE at every
+weight in `{…, -10, -6, -2}`.
+
+`hN` IS REDUNDANT, AND THAT IS PINNED RATHER THAN GLOSSED.  `..._pin_hypothesis_redundant` proves the
+SAME biconditional at `N = 0` at three weights, including `k = 2` where the RESIDUE clause HOLDS and
+the biconditional survives only because `λ = 0` and the LEVEL conjunct fails.  As in `SDF-12`, `hN`
+IS syntactically used in the proof — it is passed to `SDF-10` and `SDF-11`, which ignore it in turn —
+so no `linter.unusedVariables` suppression is needed.  It is kept for shape-uniformity with `SDF-10`,
+`SDF-11` and `SDF-12`.
+
+WHICH SQUARE-ROOT LEMMA.  As in `SDF-12`, the proof uses Mathlib's UNCONDITIONAL `Real.sqrt_eq_one`
+(`Analysis/Real/Sqrt.lean:172`, `√x = 1 ↔ x = 1`), NOT `Real.sq_sqrt` — which the DAG node's
+`built_from` names, and which would require `0 ≤ (N : ℝ)^k` as a side goal and a `zpow_pos` detour
+for no gain.  A build hint, not a statement difference.  No positivity fact about `N` is used
+anywhere in the proof; that is why `hN` can be redundant.
+
+OUT-OF-LEAN CHECK, recorded as evidence about the STATEMENT.  Before it was proved, the biconditional
+was checked in exact arithmetic (`fractions.Fraction` for `N^k`, Gaussian units for `i^{-k}`; no
+floating point) at all `40501` instances `N ∈ [0, 100]`, `k ∈ [-200, 200]`, with the `N = 0` row
+under Lean's conventions `(0 : ℝ)^k = 0` for `k ≠ 0` and `√0 = 0`.  Zero mismatches, and every
+instance at which the eigenvalue IS `-1` had `N = 1`.
+
+APPLICATION CHECK.  `frickeEigenvalue_eq_neg_one_iff_pin_application` re-derives all eight pinned
+`(N, k)` by RUNNING the general lemma there, so each is settled twice by routes sharing no lemma
+below `SDF-DEF-02`, and they agree.
+
+RECONSTRUCTION RECEIPT — THE LAST ONE IN THIS FILE IS NOW DISCHARGED.  This declaration's statement
+was originally reconstructed by a run working from a TRUNCATED specification (see the RENUMBERING
+RECEIPT in section `Sdf11`'s docstring above).  The orchestrating session has since supplied `SDF-13`
+in full and the supplied text agrees with the declaration CHARACTER FOR CHARACTER, `hN` included, so
+the reconstruction is CONFIRMED and this node may be reported as a specified node.  With `SDF-12`
+confirmed one commit earlier, NO declaration in `EtaQuotientFrickeSelfDual.lean` carries an
+unconfirmed statement any more, and that file is now `sorry`-free in full.
+
+All `decide`s in the declarations guarded below are `decide`, never `native_decide`, so no
+`Lean.ofReduceBool` enters any footprint.
+
+NORMALISATION CAVEAT, because this node is the one most likely to be misreported.  `frickeEigenvalue`
+is the UNNORMALISED constant of `f(-1/(Nz)) = λ · z^k · f(z)` and carries the factor `N^{k/2}`.  Read
+without that qualification, "eigenvalue `-1` forces `N = 1`" would appear to contradict the classical
+fact (Martin, *Multiplicative eta-quotients*, 1996) that multiplicative eta quotients of level
+`N > 1` have Fricke eigenvalue `±1`.  It does not: the classical eigenvalue is the NORMALISED one,
+here `i^{-k}` (`SDF-06`), whose `N`-dependence has already cancelled by `SDF-02`.
+`frickeEigenvalue_eq_neg_one_iff_pin_level_six_weight_two` is the guarded pin where the two disagree:
+at `(6, 2)` the normalised eigenvalue is `-1` and the unnormalised one is `-6`.
+
+PHYSICS SCOPE.  Nothing here formalises any physics.  This node says when a complex number attached
+to a level and a weight equals `-1`.  Persson–Volpato (arXiv:1504.07260) is cited in the guarded
+file's docstring as the ORIGIN of the question only, at the literature (L) tier; their CHL /
+axio-dilaton S-duality claim is NOT a Lean statement anywhere in this library and must never be
+reported as one. -/
+
+namespace Sdf13
+
+open SocrateAI.ModularForms
+
+/-! #### The three VALUE pins this node adds — `i^{2}`, and the eigenvalue at `(6, 2)` and `(1, -2)` -/
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_two
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pin_level_six_weight_two' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pin_level_six_weight_two
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pin_level_one_weight_neg_two' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pin_level_one_weight_neg_two
+
+/-! #### The eight instance pins — both sides of `SDF-13` at concrete `(N, k)` -/
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_neg_one_iff_pin_level_one' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_neg_one_iff_pin_level_one
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_neg_one_iff_pin_level_six' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_neg_one_iff_pin_level_six
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_neg_one_iff_pin_zero_weight' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_neg_one_iff_pin_zero_weight
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_neg_one_iff_pin_level_two_weight_one' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_neg_one_iff_pin_level_two_weight_one
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_neg_one_iff_pin_neg_one' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_neg_one_iff_pin_neg_one
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_neg_one_iff_pin_level_six_neg' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_neg_one_iff_pin_level_six_neg
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_neg_one_iff_pin_level_six_weight_two' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_neg_one_iff_pin_level_six_weight_two
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_neg_one_iff_pin_neg_one_neg_weight' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_neg_one_iff_pin_neg_one_neg_weight
+
+/-! #### The three negative controls — one per conjunct, plus the remainder convention -/
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_neg_one_iff_pin_not_level_only' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_neg_one_iff_pin_not_level_only
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_neg_one_iff_pin_not_emod_only' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_neg_one_iff_pin_not_emod_only
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_neg_one_iff_pin_emod_not_tmod' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_neg_one_iff_pin_emod_not_tmod
+
+/-! #### The asymmetry pin — why this right-hand side is not `SDF-12`'s with `1` replaced by `-1` -/
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_neg_one_iff_pin_asymmetry' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_neg_one_iff_pin_asymmetry
+
+/-! #### The hypothesis-redundancy pin — the biconditional also holds at `N = 0` -/
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_neg_one_iff_pin_hypothesis_redundant' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_neg_one_iff_pin_hypothesis_redundant
+
+/-! #### `SDF-13` itself -/
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_neg_one_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_neg_one_iff
+
+/-! #### The application check — the general lemma reproduces the pins -/
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_eq_neg_one_iff_pin_application' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_eq_neg_one_iff_pin_application
+
+end Sdf13
+
+/-! ### `SDF-14` — `(λ = 1 ∨ λ = -1) ↔ (4 ∣ ∑ r δ ∧ (N = 1 ∨ ∑ r δ = 0))`
+
+`SDF-14` (`frickeEigenvalue_pm_one_iff`, `EtaQuotientFrickeSelfDual.lean`) is CLOSED, and every
+declaration it adds is guarded below.
+
+WHAT THIS NODE IS, AND WHAT IT IS NOT.  `SDF-14` is the DISJUNCTION of `SDF-12` and `SDF-13`,
+re-parametrised by the WEIGHT SUM `∑ δ ∈ N.divisors, r δ` instead of the weight `k`, using the
+hypothesis `hk : ∑ δ ∈ N.divisors, r δ = 2 * k`.  It is NOT new mathematical content and NOT a
+statement about eta quotients: no `etaQuotient`, no point `z`, no dual exponent vector and no
+`IsFrickeSelfDual` hypothesis occurs in it, and `r` enters ONLY through `hk`.  In particular THIS
+GUARD MUST NOT BE READ, OR REPORTED, AS GUARDING A SPECIALISATION OF `etaQuotient_fricke`.  That
+specialisation is `SDF-04` (`etaQuotient_fricke_selfDual_raw`, guarded in section `Sdf04`).  The
+statement comparator for this node was pointed at `etaQuotient_fricke` and correctly returned
+NO_REFERENCE for exactly that reason — the same disposition already recorded for `SDF-09`
+(section `Sdf09`), `SDF-10` (section `Sdf10`) and the `SDF-12`/`SDF-13` pair.  The node's real
+references are `SDF-12` and `SDF-13`, both proved sorry-free and guarded in sections `Sdf12` and
+`Sdf13`.
+
+WHY IT IS WORTH STATING.  The weight SUM is what a concrete exponent vector presents to `decide`;
+the weight `k` exists only as the witness of `hk`.  So this is the form of the `±1` criterion that
+applies to a concrete eta quotient without first solving for `k`.
+
+THE STEP THAT IS NOT MECHANICAL, and the pin that guards it.  `4 ∣ ∑ r δ` is `4 ∣ 2k`, which does
+NOT give `4 ∣ k` (`k = 2`: `4 ∣ 4` but `4 ∤ 2`).  The backward direction case-splits
+`k % 4 ∈ {0, 2}` and routes residue `0` to `SDF-12` and residue `2` to `SDF-13`.
+`frickeEigenvalue_pm_one_iff_pin_neg_one_branch` is that instance machine-checked: at
+`(1, rPinFour, 2)` the divisibility of the SUM holds, the divisibility of the WEIGHT fails, and the
+eigenvalue is `-1`.
+
+PIN COVERAGE.  `..._pin_level_six` is the LOAD-BEARING pin: a genuine `N > 1` Fricke-self-dual
+exponent vector with the SAME weight sum `24` as the level-one pin and the OPPOSITE verdict, which
+is what forces the `(N = 1 ∨ ∑ r δ = 0)` conjunct to exist.  `..._pin_zero_exp` is DEGENERATE
+(`r ≡ 0`) and is recorded as such, but it is the ONLY pin at which the right-hand side holds with
+`N > 1`, so it is what makes the `∑ r δ = 0` disjunct non-vacuous.  `..._pin_level_two_weight_one`
+is the only pin failing on the DIVISIBILITY conjunct.  `..._pin_level_six_neg` and
+`..._pin_emod_not_tmod` are the negative-weight instances; the latter also pins
+`(-2) % 4 = 2` against `Int.tmod (-2) 4 = -2`, so the `Int.emod` convention that `SDF-13` needs is a
+checked fact at this node too, on a concrete exponent vector.
+
+NORMALISATION CAVEAT, mandatory in any prose report of this node.  `frickeEigenvalue` is the
+UNNORMALISED constant of `f(-1/(Nz)) = λ · z^k · f(z)` and carries `N^{k/2}`.  "`λ = ±1` forces
+`N = 1` or `∑ r δ = 0`" is a statement about THAT convention and does NOT contradict the classical
+fact (Martin, *Multiplicative eta-quotients*, 1996) that multiplicative eta quotients of level
+`N > 1` have Fricke eigenvalue `±1`; the classical eigenvalue is the NORMALISED one, here `i^{-k}`
+(`SDF-06`), whose `N`-dependence has already cancelled by `SDF-02`.
+
+PHYSICS SCOPE.  Nothing here formalises any physics.  This node relates a complex number attached to
+a level and a weight to a divisor-sum condition over `ℤ`.  Persson–Volpato (arXiv:1504.07260) is
+cited in the guarded file's header as the ORIGIN of the question only, at the literature (L) tier;
+their CHL / axio-dilaton S-duality claim is NOT a Lean statement anywhere in this library and must
+never be reported as one. -/
+
+namespace Sdf14
+
+open SocrateAI.ModularForms
+
+/-! #### The exponent vector this node adds, and its weight witness -/
+
+/-- info: 'SocrateAI.ModularForms.rPinNegFour_weight' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms rPinNegFour_weight
+
+/-! #### The seven instance pins — both sides of `SDF-14` at concrete `(N, r, k)` -/
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pm_one_iff_pin_level_one' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pm_one_iff_pin_level_one
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pm_one_iff_pin_level_six' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pm_one_iff_pin_level_six
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pm_one_iff_pin_zero_exp' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pm_one_iff_pin_zero_exp
+
+/-! #### The trap pin — `4 ∣ ∑ r δ` does NOT give `4 ∣ k`, and here `λ = -1`, not `1` -/
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pm_one_iff_pin_neg_one_branch' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pm_one_iff_pin_neg_one_branch
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pm_one_iff_pin_level_two_weight_one' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pm_one_iff_pin_level_two_weight_one
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pm_one_iff_pin_level_six_neg' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pm_one_iff_pin_level_six_neg
+
+/-! #### The remainder convention at this node's level, on a concrete exponent vector -/
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pm_one_iff_pin_emod_not_tmod' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pm_one_iff_pin_emod_not_tmod
+
+/-! #### `SDF-14` itself -/
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pm_one_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pm_one_iff
+
+/-! #### The application check — the general lemma reproduces the pins -/
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pm_one_iff_pin_application' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pm_one_iff_pin_application
+
+end Sdf14
+
+/-! ### `SDF-15` — the NORMALISED `±1` criterion: `(i^{-k} = 1 ∨ i^{-k} = -1) ↔ Even k`
+
+WHAT IS GUARDED.  `I_zpow_neg_pm_one_iff (k : ℤ) : ((I : ℂ) ^ (-k) = 1 ∨ (I : ℂ) ^ (-k) = -1) ↔
+Even k`, together with six weight pins, two negative controls, the negation-invariance lemma
+`I_zpow_neg_pm_one_iff_even_neg` and the application check.
+
+WHAT IT IS NOT, AND MUST NOT BE REPORTED AS.  Like `SDF-07`, `SDF-08` and `SDF-09`, this is a fact
+about `ℂ` and `ℤ` ALONE: no level `N`, no exponent vector `r : EtaExp`, no `N.divisors`, no point
+`z`, no `ℍₒ`, no `etaQuotient`, no `IsFrickeSelfDual` hypothesis and no `hk : ∑ r δ = 2 * k` occurs
+in it.  THIS GUARD MUST NOT BE READ, OR REPORTED, AS GUARDING A SPECIALISATION OF
+`etaQuotient_fricke`.  That specialisation is `SDF-04` (`etaQuotient_fricke_selfDual_raw`, guarded in
+section `Sdf04`).  The statement comparator for this node was pointed at `etaQuotient_fricke` and
+correctly returned NO_REFERENCE for exactly that reason — the same disposition already recorded for
+`SDF-09`, `SDF-10`, `SDF-12`/`SDF-13` and `SDF-14`.  The node's real references are `SDF-08`
+(`I_zpow_neg_eq_one_iff`, section `Sdf08`) and `SDF-09` (`I_zpow_neg_eq_neg_one_iff`, section
+`Sdf09`), both proved sorry-free, together with `SDF-06` for the identification of `i^{-k}` as the
+normalised eigenvalue.
+
+DEPENDENCY RECEIPT.  The DAG entry lists `depends_on: [SDF-08, SDF-09]`.  An earlier draft of the
+node listed `[SDF-07]`; that understated it, since routing through `SDF-07` directly would re-run the
+four-case residue analysis `SDF-08` and `SDF-09` already carry, including the `Int.emod` /
+`Int.tmod` hazard pinned by `I_zpow_neg_eq_neg_one_iff_pin_emod_not_tmod`.  The proof reuses the two
+closed criteria and closes the remaining gap, `(4 ∣ k ∨ k % 4 = 2) ↔ k % 2 = 0`, with `omega`.
+
+PIN COVERAGE.  `..._pin_two` is the LOAD-BEARING pin: `k = 2` is the ONLY pinned weight at which the
+left-hand side holds through its SECOND disjunct (`i^{-2} = -1`, and `i^{-2} ≠ 1` is recorded
+separately), and it is the weight of `selfDual_pin_eigenvalue_neg_one` (`η⁴` at level one, eigenvalue
+`-1`).  A version of this node with `i^{-k} = 1` alone on the left — i.e. `SDF-08`'s left-hand side —
+is refuted there.  `..._pin_twelve` is the `Δ = η²⁴` / level-six weight, `..._pin_neg_twelve` the
+negative-weight instance (a proof assuming `0 ≤ k` breaks there), `..._pin_zero` the DEGENERATE
+`r ≡ 0` case, recorded as such.  `..._pin_fifteen` and `..._pin_one` cover the two ODD residue
+classes, with values `i` and `-i`; each records the value and refutes BOTH `1` and `-1`, one
+comparison through `Complex.I_im` and one through `Complex.I_re`, so neither refutation can be an
+artefact of `±1` bookkeeping.  `..._pin_neither_disjunct_alone` shows neither `SDF-08`'s nor
+`SDF-09`'s criterion is equivalent to `Even k` on the `ℂ` side, and
+`..._pin_even_strictly_between` shows the same on the `ℤ` side by `decide`.
+
+NORMALISATION CAVEAT, mandatory in any prose report of this node, and sharper here than anywhere
+else in this file.  `i^{-k}` is the NORMALISED eigenvalue — `SDF-06` has already divided out
+`√(N^k)` and `z^k`.  The sentence "the Fricke eigenvalue is `±1` iff the weight is even" is TRUE of
+`i^{-k}` and FALSE of `frickeEigenvalue`, the UNNORMALISED constant, for which `±1` is `SDF-14`'s far
+tighter condition requiring `N = 1` or `∑ r δ = 0`;
+`frickeEigenvalue_eq_neg_one_iff_pin_level_six_weight_two` is the instance where the two conventions
+differ (normalised `-1`, unnormalised `-6`).  This node may be quoted in preference to `SDF-14` only
+with the normalisation named in the same sentence, and only after composing with `SDF-06`.
+Separately, the re-parametrisation `Even k ↔ 4 ∣ ∑_{δ ∣ N} r δ` is NOT guarded here and is not a
+consequence of this node: it needs `hk : ∑ δ ∈ N.divisors, r δ = 2 * k`, which `SDF-15` does not
+carry.
+
+PHYSICS SCOPE.  Nothing here formalises any physics.  This node relates an integer power of the
+complex unit `i` to the parity of an integer.  Persson–Volpato (arXiv:1504.07260) is cited in the
+guarded file's header as the ORIGIN of the self-duality question only, at the literature (L) tier;
+their CHL / axio-dilaton S-duality claim is NOT a Lean statement anywhere in this library and must
+never be reported as one. -/
+
+namespace Sdf15
+
+open SocrateAI.ModularForms
+
+/-! #### The six weight pins — both sides of `SDF-15` at concrete weights -/
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_pm_one_iff_pin_twelve' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_pm_one_iff_pin_twelve
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_pm_one_iff_pin_neg_twelve' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_pm_one_iff_pin_neg_twelve
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_pm_one_iff_pin_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_pm_one_iff_pin_zero
+
+/-! #### The load-bearing pin — the left-hand side holds through its SECOND disjunct only -/
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_pm_one_iff_pin_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_pm_one_iff_pin_two
+
+/-! #### The two ODD residue classes, where no `±1` coincidence can fake the value -/
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_pm_one_iff_pin_fifteen' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_pm_one_iff_pin_fifteen
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_pm_one_iff_pin_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_pm_one_iff_pin_one
+
+/-! #### The negative controls — neither component criterion is equivalent to `Even k` -/
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_pm_one_iff_pin_neither_disjunct_alone' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_pm_one_iff_pin_neither_disjunct_alone
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_pm_one_iff_pin_even_strictly_between' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_pm_one_iff_pin_even_strictly_between
+
+/-! #### Parity is negation-invariant — the `k`/`-k` hazard of `SDF-09` does not arise here -/
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_pm_one_iff_even_neg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_pm_one_iff_even_neg
+
+/-! #### `SDF-15` itself -/
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_pm_one_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_pm_one_iff
+
+/-! #### The application check — the general lemma reproduces the pins -/
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_pm_one_iff_pin_application' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_pm_one_iff_pin_application
+
+end Sdf15
+
+/-! ## `SDF-16` — `IsFrickeSelfDual` is DECIDABLE  (ERGONOMICS ONLY)
+
+`decidableIsFrickeSelfDual` is the `Decidable` instance for `IsFrickeSelfDual N r`, obtained by
+`inferInstanceAs` at the bounded quantifier `∀ δ ∈ N.divisors, r δ = r (N / δ)` the `def` unfolds to,
+where Mathlib's `Finset.decidableBAll` already applies.
+
+READ THIS BEFORE QUOTING THE NODE.  It is ERGONOMICS and nothing more: with it in scope, `by decide`
+closes a self-duality goal without the leading `unfold IsFrickeSelfDual`.  Two overclaims were
+caught by this run's statement comparator and are guarded against here by being written down.
+(i) This node is NOT what lets the `selfDual_cond_pin_*` pins of section `SdfDef01` discharge their
+goals — every one of them predates it, uses `unfold IsFrickeSelfDual; decide`, needs no instance,
+and was `sorry`-free before it existed.  (ii) This node is NOT what makes the self-duality
+hypothesis non-vacuous — that is `not_selfDual_pin_asymmetric` and `not_selfDual_pin_mispaired`,
+both guarded in section `SdfDef01`, both independent of this instance.  Nothing in the library above
+the node's own section depends on it.
+
+IT IS STILL A GENUINE DELTA.  Verified this run: with the instance removed,
+`IsFrickeSelfDual 6 rPinSix := by decide`, `¬ IsFrickeSelfDual 2 rPinAsym := by decide` and
+`decide (IsFrickeSelfDual 6 rPinSix) = true := rfl` fail with exactly three
+`failed to synthesize Decidable (IsFrickeSelfDual …)` errors and no other cause.
+
+WHAT THESE GUARDS ACTUALLY GUARD.  A `Decidable` instance is proof-carrying, so it CANNOT disagree
+with the proposition it decides — this node cannot be wrong about which exponent vectors are
+self-dual.  The failure mode it CAN have is being INERT: an instance that elaborates but does not
+reduce in the kernel (`Classical.dec` typechecks against the same statement and computes nothing),
+or one routed through `native_decide` (which would put `Lean.ofReduceBool` in the footprint).
+`decidableIsFrickeSelfDual_pin_bool_values` is the pin that refutes both — it asserts the `Bool`
+value of `decide (IsFrickeSelfDual N r)` at four TRUE and two FALSE concrete instances **by `rfl`**,
+forcing kernel evaluation of `Nat.divisors N` and of the exponent vector at every divisor.  The
+footprints below are therefore load-bearing in one specific way: any `Lean.ofReduceBool` appearing
+in them means a `decide` somewhere below became a `native_decide`.
+
+THE PINNED ROWS, computed outside Lean first (exact integer arithmetic, this session) and only then
+asserted: `N=1 r=(24)` self-dual (DEGENERATE — at `N = 1` every `r` is); `N=6 r=(1,11,11,1)`
+self-dual (THE LOAD-BEARING ROW — the only positive one with `N > 1` and a non-constant vector);
+`N=6 r≡0` self-dual (DEGENERATE, a floor); `N=4 r=(-2,6,-2)` self-dual (the only row with NEGATIVE
+entries and the only `N > 1` level with a self-paired divisor, `4/2 = 2`); `N=6 r=(1,11,1,11)` NOT
+self-dual (the mis-pairing control, same weight sum `24`, invariant under the WRONG involution
+`1 ↔ 3`, `2 ↔ 6`); `N=2 r=(2,0)` NOT self-dual (the `fricke_dual_pin` vector).
+
+`decidableIsFrickeSelfDual_pin_level_zero_vacuous` is a TRAP, not evidence: `Nat.divisors 0 = ∅`, so
+`IsFrickeSelfDual 0 r` is VACUOUSLY TRUE for every `r`, including `rPinAsym`, which is not self-dual
+at `N = 2`.  Both halves are asserted at the same vector so the contrast is machine-checked.  This
+is why every `SDF-*` lemma carries `hN : 0 < N`, and it is a hazard specific to the decidable
+reading: `by decide` will close `IsFrickeSelfDual 0 r` for any concrete `r`, so a future pin that
+dropped its positivity hypothesis would pass.  Its second conjunct is `not_selfDual_pin_asymmetric`
+REUSED, not re-decided.
+
+PHYSICS SCOPE.  Nothing here formalises any physics.  This node says a decidable arithmetic
+condition on a function `ℕ → ℤ` over a finite set of divisors is decidable.  Persson–Volpato
+(arXiv:1504.07260) is cited in the guarded file's header as the ORIGIN of the self-duality question
+only, at the literature (L) tier; their CHL / axio-dilaton S-duality claim is NOT a Lean statement
+anywhere in this library and must never be reported as one. -/
+
+namespace Sdf16
+
+open SocrateAI.ModularForms
+
+/-! #### `SDF-16` itself — the instance -/
+
+/-- info: 'SocrateAI.ModularForms.decidableIsFrickeSelfDual' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms decidableIsFrickeSelfDual
+
+/-! #### The four positive rows, each closed by BARE `decide` (no `unfold`) -/
+
+/-- info: 'SocrateAI.ModularForms.decidableIsFrickeSelfDual_pin_level_one' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms decidableIsFrickeSelfDual_pin_level_one
+
+/-- info: 'SocrateAI.ModularForms.decidableIsFrickeSelfDual_pin_level_six' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms decidableIsFrickeSelfDual_pin_level_six
+
+/-- info: 'SocrateAI.ModularForms.decidableIsFrickeSelfDual_pin_zero_exp' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms decidableIsFrickeSelfDual_pin_zero_exp
+
+/-- info: 'SocrateAI.ModularForms.decidableIsFrickeSelfDual_pin_level_four_neg' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms decidableIsFrickeSelfDual_pin_level_four_neg
+
+/-! #### The negative-side row — the instance produces `isFalse`, not merely `isTrue` -/
+
+/-- info: 'SocrateAI.ModularForms.decidableIsFrickeSelfDual_pin_mispaired' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms decidableIsFrickeSelfDual_pin_mispaired
+
+/-! #### THE PIN THAT CAN FAIL — the `Bool` values by `rfl`, i.e. by kernel reduction -/
+
+/-- info: 'SocrateAI.ModularForms.decidableIsFrickeSelfDual_pin_bool_values' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms decidableIsFrickeSelfDual_pin_bool_values
+
+/-! #### The `N = 0` TRAP — vacuously true there, false at `N = 2` on the SAME vector -/
+
+/-- info: 'SocrateAI.ModularForms.decidableIsFrickeSelfDual_pin_level_zero_vacuous' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms decidableIsFrickeSelfDual_pin_level_zero_vacuous
+
+end Sdf16
+
+/-! ## `SDF-PIN-01` — the level-one pin's REACH, guarded
+
+`selfDual_raw_pin_level_one_is_eta_S` (guarded in section `Sdf04` above) is the level-one instance
+of `SDF-04` carried down to `η(-1/z)²⁴ = z¹² η(z)²⁴`, i.e. to `eta_S_via_fricke` /
+MATHLIB's `discriminant_S_invariant`, by a route that names neither.  The independence is now
+CHECKED rather than argued from the tactic scripts: walking the kernel proof term of
+`selfDual_raw_pin_level_one_is_eta_S` transitively (this run) reaches `etaQuotient_fricke`,
+`etaQuotient_congr_divisors`, `selfDual_cond_pin_level_one`, `rPinOne_weight` and
+`IsFrickeSelfDual`, and reaches NEITHER `eta_S_via_fricke` NOR `discriminant_S_invariant`.
+
+WHAT IS GUARDED HERE IS THE OPPOSITE OF EVIDENCE.  Earlier prose in this file (and in
+`eta_S_via_fricke`'s own docstring) claimed that a wrong `i^{-k}`, a wrong power of `N` or an
+inverted `√s` would fail at that instance.  THAT CLAIM WAS FALSE and has been corrected in all
+three places: at `N = 1`, `k = 12` we have `i^{-12} = i^{+12}`, `1^k = 1` for every `k`, `s = 1`
+so `(√s)⁻¹ = √s`, and `δ ↦ 1/δ` is the identity on `Nat.divisors 1`.  The four
+`selfDual_pin_level_one_no_evidence_*` theorems prove exactly those four degeneracies, so the
+limitation is machine-checked rather than remembered, and the level-one pin is filed as a FLOOR
+(two definitions reproducing an already-established value by a second route), not as a test that
+discriminates any component of `λ = i^{-k} · N^k · s^{-1/2}`.
+
+The two `..._evidence_*` theorems check that the discrimination is somewhere: three of the four
+degeneracies fail at `N = 6` (`selfDual_pin_level_six_evidence_contrast`), and the fourth fails
+only at ODD weight (`selfDual_pin_weight_one_evidence_I_sign`) — raising the level does NOT fix
+it, since `i^{-k} = i^{k}` for every even `k`.  The perturbation evidence about the GENERAL
+statement (`scratch/A7perturb.lean`, five failing perturbations of `etaQuotient_fricke`) is
+unaffected by this correction: it concerns free `N` and `k`, not the `N = 1` instance. -/
+
+section SdfPin01
+
+/-- info: 'SocrateAI.ModularForms.selfDual_pin_level_one_no_evidence_I_sign' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_pin_level_one_no_evidence_I_sign
+
+/-- info: 'SocrateAI.ModularForms.selfDual_pin_level_one_no_evidence_level_pow' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_pin_level_one_no_evidence_level_pow
+
+/-- info: 'SocrateAI.ModularForms.selfDual_pin_level_one_no_evidence_radicand' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_pin_level_one_no_evidence_radicand
+
+/-- info: 'SocrateAI.ModularForms.selfDual_pin_level_one_no_evidence_involution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_pin_level_one_no_evidence_involution
+
+/-! #### The contrast checks — the discrimination is elsewhere, and it is really there -/
+
+/-- info: 'SocrateAI.ModularForms.selfDual_pin_level_six_evidence_contrast' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_pin_level_six_evidence_contrast
+
+/-- info: 'SocrateAI.ModularForms.selfDual_pin_weight_one_evidence_I_sign' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_pin_weight_one_evidence_I_sign
+
+end SdfPin01
+
+/-! ## `SDF-PIN-02` — the level-two pin in expanded `η` form, and its reach, guarded
+
+`SDF-PIN-02` is `selfDual_eigen_pin_level_two_eta`
+(`EtaQuotientFrickeSelfDual.lean`, inside `section Sdf05Pins`):
+
+```
+η(-1/(2z)) · η(2 · (-1/(2z)))  =  -i·√2 · z · (η(z) · η(2z))
+```
+
+the `(N, r, k) = (2, rPinTwo, 1)` instance of `SDF-05`, i.e. `f = η(z)·η(2z)`, with every definition
+this library introduces unfolded away.  It is the ONLY pin in that module stated without
+`etaQuotient`, `EtaExp` or `frickeEigenvalue`, so it is the only one that exercises the
+`etaQuotient` UNFOLDING (`divisors 2 = {1, 2}`, `Finset.prod_pair`, `zpow_one`, the casts).
+
+WHAT IT IS NOT.  It is not the `(2, 1)` constant collapse — `frickeEigenvalue_pin_level_two_weight_one`
+(`SDF-DEF-02`, guarded in section `SdfDef02`) already closed that — and it is not "the only odd
+weight", since `selfDual_eigen_pin_level_four_neg` (`k = 1`) precedes it.  And it is NOT evidence
+about the divisor PAIRING: `rPinTwo` is constant on `Nat.divisors 2`, which
+`selfDual_eigen_pin_level_two_no_evidence_pairing` proves, so a transposed pairing would still close
+it.  The pairing evidence lives at level six (`rPinSix_nonconstant`, `not_selfDual_pin_mispaired`,
+`prod_zpow_pin_mispaired_ne`), exactly as section `SdfPin01` records for the level-one pin.
+
+WHAT IS GENUINELY NEW, and guarded here.  (i) The `SDF-03` constant collapse at an IRRATIONAL
+radicand: `fricke_const_pin_level_two` is the first member of that pin family whose two routes meet
+at `√2` rather than at an integer or its reciprocal, and `two_mul_inv_sqrt_two` is the one step
+`ring` and `norm_num` cannot do (`√2` is an atom to both).  (ii) A SECOND, INDEPENDENT DERIVATION of
+the node's equation: `selfDual_eigen_pin_level_two_eta_via_upstream` reaches it from
+`fricke_level_two_pin` (`EtaQuotientModularity.lean:2285`, hand-derived one run earlier from the
+`S`-transform at `z` and `2z`) through `selfDual_eigen_pin_level_two_routes_agree`
+(`i⁻¹ · 2 · (√2)⁻¹ = -i·√2`).  So "the two spellings agree" is a BUILD OBLIGATION, not a docstring
+claim: if `SDF-03`'s collapse and that hand computation ever disagreed at this instance, one of the
+two derivations would stop compiling.
+
+INDEPENDENCE OF THE TWO ROUTES, checked on the compiled KERNEL TERM this run
+(`scratch_sdfpin02/DepWalk.lean`), not argued from the tactic scripts — `fricke_level_two_pin` is in
+scope in the self-dual module, so source-text absence would not be enough:
+
+* `selfDual_eigen_pin_level_two_eta` reaches `etaQuotient_fricke`, `etaQuotient_fricke_selfDual_raw`,
+  `fricke_const_selfDual`, `prod_zpow_selfDual`, `frickeEigenvalue`, `IsFrickeSelfDual`, and reaches
+  NEITHER `fricke_level_two_pin` NOR `etaQuotient_fricke_selfDual`;
+* `selfDual_eigen_pin_level_two_eta_via_upstream` reaches `fricke_level_two_pin`,
+  `two_mul_inv_sqrt_two` and `Complex.inv_I`, and reaches NONE of
+  `selfDual_eigen_pin_level_two_eta`, `selfDual_eigen_pin_level_two`,
+  `etaQuotient_fricke_selfDual`, `etaQuotient_fricke_selfDual_raw`, `fricke_const_selfDual`,
+  `prod_zpow_selfDual`, `frickeEigenvalue` or `IsFrickeSelfDual`.
+
+Corroborating receipt for the same claim: `fricke_level_two_pin` carries no `@[simp]` (whole-file
+scan of `EtaQuotientModularity.lean` for `@[simp]` and `attribute [simp]` this run returns fifteen
+hits, none of them this theorem), and every tactic in the node's proof takes an explicit lemma list.
+
+NUMERICS, computed outside Lean this run at 40 dps from `η`'s product formula (800 factors) and only
+then asserted: relative error `≤ 5.9e-41` at `z ∈ {i, 2i, 1+i, 0.3+0.7i, -0.4+1.3i, 0.13+0.41i}`;
+the CONJUGATE constant `+i√2` fails at relative error `2.0` at every one of them.  Its Lean
+counterpart is `selfDual_eigen_pin_level_two_not_conjugate`.
+
+Two of the eighteen footprints below are `does not depend on any axioms` (`rPinTwo_values_pin` and
+`selfDual_eigen_pin_level_two_no_evidence_pairing`, both closed by `decide` on a decidable
+proposition about `rPinTwo` alone); the other sixteen are `[propext, Classical.choice, Quot.sound]`.
+No `sorryAx` anywhere.  Must-fail control: `verification/SdfPin02NegControl.lean`. -/
+
+section SdfPin02
+
+/-- info: 'SocrateAI.ModularForms.rPinTwo_weight' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms rPinTwo_weight
+
+/-- info: 'SocrateAI.ModularForms.rPinTwo_divisors_pin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms rPinTwo_divisors_pin
+
+/-- info: 'SocrateAI.ModularForms.rPinTwo_values_pin' does not depend on any axioms -/
+#guard_msgs in #print axioms rPinTwo_values_pin
+
+/-- info: 'SocrateAI.ModularForms.sqrt_natPow_level_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms sqrt_natPow_level_two
+
+/-- info: 'SocrateAI.ModularForms.two_mul_inv_sqrt_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms two_mul_inv_sqrt_two
+
+/-- info: 'SocrateAI.ModularForms.fricke_const_pin_level_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms fricke_const_pin_level_two
+
+/-- info: 'SocrateAI.ModularForms.sqrt_two_nondegenerate' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms sqrt_two_nondegenerate
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pin_level_two_weight_one_spelling' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pin_level_two_weight_one_spelling
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_two
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_two_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_two_value
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_two_eta' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_two_eta
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_two_routes_agree' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_two_routes_agree
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_two_eta_via_upstream' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_two_eta_via_upstream
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_two_not_conjugate' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_two_not_conjugate
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_two_evidence_level_pow' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_two_evidence_level_pow
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_two_evidence_radicand' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_two_evidence_radicand
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_two_evidence_involution' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_two_evidence_involution
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_two_no_evidence_pairing' does not depend on any axioms -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_two_no_evidence_pairing
+
+end SdfPin02
+
+/-! ## `SDF-PIN-03` — the level-four, weight-four eigenform identity, written out in `η`
+
+`selfDual_eigen_pin_level_four_weight_four_eta`
+(`EtaQuotientFrickeSelfDual.lean`, section `SdfPin03`):
+
+```
+η(-1/(4z))² · η(2·(-1/(4z)))⁴ · η(4·(-1/(4z)))²  =  16 · z⁴ · (η(z)² · η(2z)⁴ · η(4z)²)
+```
+
+the `(N, r, k) = (4, rPinLevelFourWeightFour, 4)` instance of `SDF-05`, `s = 1²·2⁴·4² = 256 = 4⁴`,
+`λ = i^{-4} · √(4⁴) = 1 · 16 = 16`.  The second statement in the library (after `SDF-PIN-02`) with
+`etaQuotient`, `EtaExp`, `frickeEigenvalue` and `IsFrickeSelfDual` all unfolded away, and the first
+at `N > 2`, at EVEN weight, and on a NON-CONSTANT exponent vector.
+
+WHAT THE GUARDS BELOW ARE FOR, beyond the usual `sorryAx` watch.  This node's eigenvalue is reached
+twice — `prod_zpow_pin_level_four_weight_four` computes `s = 256` DIRECTLY from
+`Nat.divisors 4 = {1,2,4}` while `prod_zpow_selfDual_pin_level_four_weight_four` reaches the same
+number through `SDF-02`'s general collapse `s = N^k` — and the two must agree.  Likewise
+`selfDual_cond_pin_level_four_weight_four` (bare `decide`, through `SDF-16`'s instance) and
+`..._unfolded` (`unfold IsFrickeSelfDual; decide`, needing no instance) discharge one hypothesis by
+two routes.  And `selfDual_eigen_pin_level_one_eta_calibration` re-derives, along this file's
+`SDF-05`/`SDF-04`/`SDF-03`/`SDF-02` route, the statement `eta_S_via_fricke` proves upstream WITHOUT
+self-duality; `..._agrees` pairs the two proofs of that one proposition so the agreement is a build
+obligation.
+
+READ THE LIMITATION BEFORE CITING THIS NODE.  At `(N, k) = (4, 4)` the LEVEL and the WEIGHT are the
+SAME NUMBER, so a constant that had swapped them reads `16` either way and is INVISIBLE here —
+`selfDual_eigen_pin_level_four_weight_four_no_evidence_level_weight` states that in Lean.  The
+degeneracy is broken by the two companion η-unfolded pins, both guarded below:
+`selfDual_eigen_pin_level_nine_weight_four_eta` (`N = 9`, `k = 4`, `λ = 81`, while `√(k^N) = 512`)
+moves the level at fixed weight, and `selfDual_eigen_pin_level_four_weight_two_eta` (`N = 4`,
+`k = 2`, `λ = -4`, NEGATIVE, so `i^{-k}` is visible) moves the weight at fixed level.  Neither
+alone suffices.  The degenerate `r ≡ 0` case at the node's own level is
+`selfDual_eigen_pin_level_four_zero_exp`.
+
+NUMERICS, computed outside Lean this run at 60 dps from `η`'s product formula (1200 factors) and
+only then asserted: relative error `≤ 3.5e-60` for the node at
+`z ∈ {i, 0.3+0.7i, -0.11+0.45i, 0.25+0.9i, -0.4+1.3i, 0.05+0.31i}`, and `≤ 1.5e-59` for each of the
+four calibration/companion pins at `z = 0.3+0.7i`.  Negative controls for the node at `z = 0.3+0.7i`:
+`λ = 256` fails at relative error `9.4e-1`, `λ = 4` at `3.0`, `λ = 8` at `1.0`, `λ = 32` at `5.0e-1`,
+`λ = -16` at `2.0`, `λ = 16i` at `1.4`, `z²` in place of `z⁴` at `1.5`, `z⁶` at `2.5`.
+
+Two of the thirty-six footprints below are `does not depend on any axioms`
+(`rPinLevelFourWeightFour_values_pin` and
+`selfDual_eigen_pin_level_four_weight_four_evidence_pairing`, both closed by `decide` on a decidable
+proposition about the exponent vector alone); the other thirty-four are
+`[propext, Classical.choice, Quot.sound]`.  No `sorryAx` anywhere.  Must-fail control:
+`verification/SdfPin03NegControl.lean`.
+
+NAMING: `sqrt_natPow_level_four_weight_four` is `√(4⁴) = 16` and is a DIFFERENT lemma from
+`sqrt_natPow_level_four`, which is `√(4¹) = 2` — the library's other level-four instance has weight
+one.  And the condition `r δ = r (N / δ)` is SELF-DUAL (Fricke-symmetric), never "balanced". -/
+
+section SdfPin03
+
+/-- info: 'SocrateAI.ModularForms.divisors_four_pin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms divisors_four_pin
+
+/-- info: 'SocrateAI.ModularForms.divisors_nine_pin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms divisors_nine_pin
+
+/-- info: 'SocrateAI.ModularForms.selfDual_cond_pin_level_four_weight_four' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_cond_pin_level_four_weight_four
+
+/-- info: 'SocrateAI.ModularForms.selfDual_cond_pin_level_four_weight_four_unfolded' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_cond_pin_level_four_weight_four_unfolded
+
+/-- info: 'SocrateAI.ModularForms.not_selfDual_pin_level_four_mispaired' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms not_selfDual_pin_level_four_mispaired
+
+/-- info: 'SocrateAI.ModularForms.selfDual_cond_pin_level_nine_weight_four' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_cond_pin_level_nine_weight_four
+
+/-- info: 'SocrateAI.ModularForms.selfDual_cond_pin_level_four_weight_two' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_cond_pin_level_four_weight_two
+
+/-- info: 'SocrateAI.ModularForms.selfDual_cond_pin_level_four_zero_exp' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_cond_pin_level_four_zero_exp
+
+/-- info: 'SocrateAI.ModularForms.rPinLevelFourWeightFour_weight' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms rPinLevelFourWeightFour_weight
+
+/-- info: 'SocrateAI.ModularForms.rPinLevelNineWeightFour_weight' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms rPinLevelNineWeightFour_weight
+
+/-- info: 'SocrateAI.ModularForms.rPinLevelFourWeightTwo_weight' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms rPinLevelFourWeightTwo_weight
+
+/-- info: 'SocrateAI.ModularForms.rPinLevelFourZero_weight' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms rPinLevelFourZero_weight
+
+/-- info: 'SocrateAI.ModularForms.rPinLevelFourMispaired_weight' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms rPinLevelFourMispaired_weight
+
+/-- info: 'SocrateAI.ModularForms.rPinLevelFourWeightFour_values_pin' does not depend on any axioms -/
+#guard_msgs in #print axioms rPinLevelFourWeightFour_values_pin
+
+/-- info: 'SocrateAI.ModularForms.prod_zpow_pin_level_four_weight_four' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms prod_zpow_pin_level_four_weight_four
+
+/-- info: 'SocrateAI.ModularForms.prod_zpow_selfDual_pin_level_four_weight_four' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms prod_zpow_selfDual_pin_level_four_weight_four
+
+/-- info: 'SocrateAI.ModularForms.prod_zpow_pin_level_nine_weight_four' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms prod_zpow_pin_level_nine_weight_four
+
+/-- info: 'SocrateAI.ModularForms.prod_zpow_pin_level_four_weight_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms prod_zpow_pin_level_four_weight_two
+
+/-- info: 'SocrateAI.ModularForms.sqrt_natPow_level_four_weight_four' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms sqrt_natPow_level_four_weight_four
+
+/-- info: 'SocrateAI.ModularForms.sqrt_natPow_level_nine_weight_four' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms sqrt_natPow_level_nine_weight_four
+
+/-- info: 'SocrateAI.ModularForms.sqrt_natPow_level_four_weight_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms sqrt_natPow_level_four_weight_two
+
+/-- info: 'SocrateAI.ModularForms.I_zpow_neg_four' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms I_zpow_neg_four
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pin_level_four_weight_four' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pin_level_four_weight_four
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pin_level_nine_weight_four' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pin_level_nine_weight_four
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pin_level_four_weight_two' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pin_level_four_weight_two
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_one_eta_calibration' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_one_eta_calibration
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_one_eta_calibration_agrees' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_one_eta_calibration_agrees
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_four_zero_exp' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_four_zero_exp
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_nine_weight_four_eta' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_nine_weight_four_eta
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_four_weight_two_eta' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_four_weight_two_eta
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_four_weight_four_eta' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_four_weight_four_eta
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_four_weight_four_evidence_pairing' does not depend on any axioms -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_four_weight_four_evidence_pairing
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_four_weight_four_evidence_involution_fixed' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_four_weight_four_evidence_involution_fixed
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_four_weight_four_evidence_radicand' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_four_weight_four_evidence_radicand
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_four_weight_four_evidence_level_and_weight' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_four_weight_four_evidence_level_and_weight
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_four_weight_four_no_evidence_level_weight' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_four_weight_four_no_evidence_level_weight
+
+end SdfPin03
+
+/-! ## `SDF-PIN-04` — the level-four, WEIGHT-ZERO eigenform identity, written out in `η`
+
+`selfDual_eigen_pin_level_four_weight_zero_eta`
+(`EtaQuotientFrickeSelfDual.lean`, section `SdfPin04`):
+
+```
+η(-1/(4z))⁻² · η(2·(-1/(4z)))⁴ · η(4·(-1/(4z)))⁻²  =  η(z)⁻² · η(2z)⁴ · η(4z)⁻²
+```
+
+the `(N, r, k) = (4, rPinLevelFourWeightZero, 0)` instance of `SDF-05`, `s = 1⁻²·2⁴·4⁻² = 1 = 4⁰`,
+`λ = i^{-0} · √(4⁰) = 1`.  The fourth statement in the library with `etaQuotient`, `EtaExp`,
+`frickeEigenvalue` and `IsFrickeSelfDual` all unfolded away; the FIRST with NEGATIVE exponents; and
+the first whose radicand is `1` by CANCELLATION (`2⁴ · 4⁻²`) rather than because every factor is
+separately `1`.  At `λ = 1` and `k = 0` the equation says the eta quotient `η(2z)⁴/(η(z)²η(4z)²)` is
+INVARIANT under `z ↦ -1/(4z)`.
+
+WHAT THE GUARDS BELOW ARE FOR, beyond the usual `sorryAx` watch.  This node is proved TWICE, and the
+two proofs are kernel-verified independent (`scratch_sdfpin04/DepWalk.lean`, this run):
+`selfDual_eigen_pin_level_four_weight_zero_eta` goes through `SDF-05` and hence `SDF-04`, `SDF-03`,
+`SDF-02`, `SDF-DEF-01`, `SDF-DEF-02`, `SDF-16`; `..._eta_via_fricke` reaches the SAME equation from
+`etaQuotient_fricke` (`F3.2-A7`) alone and touches NONE of those — its dual-vector collapse is the
+hand-written `etaQuotient_dual_pin_level_four_weight_zero` over the bare `decide` fact
+`rPinLevelFourWeightZero_dual_eq_pin`, and its constant is killed by
+`prod_zpow_pin_level_four_weight_zero` and `Real.sqrt_one`.  `..._routes_agree` pairs them, so this
+module's packaged constant agreeing with the upstream raw constant is a `lake build` obligation.
+Likewise `prod_zpow_pin_level_four_weight_zero` (`s = 1` computed directly through negative `zpow`s)
+and `prod_zpow_selfDual_pin_level_four_weight_zero` (`s = 4⁰` through `SDF-02`) are a two-route
+product check, and `selfDual_cond_pin_level_four_weight_zero` (bare `decide`, through `SDF-16`) and
+`..._unfolded` (`unfold IsFrickeSelfDual; decide`, no instance) discharge one hypothesis twice.
+`selfDual_eigen_pin_level_four_weight_zero_regime_battery` makes the three named regimes — the
+`N = 1` calibration against `eta_S_via_fricke`, the `r ≡ 0` case at this level, and the `N = 9`,
+`k = 4` non-constant instance — a build obligation of this section as well.
+
+READ THE LIMITATION BEFORE CITING THIS NODE — it is severe.  At `k = 0` EVERY component of
+`λ = i^{-k} · N^k · s^{-1/2}` collapses to `1` for a reason that survives any misspelling of it:
+`i^{-0} = i^{+0}`, `4⁰ = 9⁰`, `s = 1` so `(√s)⁻¹ = √s`, and `z⁰ = 1`.
+`selfDual_eigen_pin_level_four_weight_zero_no_evidence_constant` states all four in Lean.  **This
+node pins NO component of the Fricke constant** and must NOT be counted among this arc's
+constant-pinning instances; those are `selfDual_eigen_pin_level_six` (`λ = 46656`),
+`selfDual_eigen_pin_level_four_neg` (`λ = -2i`), `selfDual_eigen_pin_level_two_eta` (`λ = -i√2`) and
+`selfDual_eigen_pin_level_four_weight_two_eta` (`λ = -4`), all guarded elsewhere in this file.  What
+it DOES pin: the dual-vector substitution on a NON-constant vector
+(`..._evidence_pairing`, `r 1 = -2 ≠ 4 = r 2`, with the same-weight negative control
+`not_selfDual_pin_level_four_weight_zero_mispaired`), negative-exponent `zpow` bookkeeping in an
+`η`-level identity (`..._evidence_negative_exponents`), and a radicand that genuinely cancels
+(`..._evidence_radicand_cancels`).
+
+NUMERICS, computed outside Lean this run at 60 dps from `η`'s product formula (1500 factors) and
+only then asserted: relative error `≤ 2.9e-60` for the node at
+`z ∈ {0.3+0.7i, -0.11+0.45i, 0.9+1.3i, i, 0.05+0.31i, -0.4+1.3i}`.  Negative controls at
+`z = 0.3+0.7i`: `λ = -1` fails at relative error `2.0`, `λ = i` at `1.41`, `λ = 16` at `0.94`,
+`λ = 1/16` at `15.0`, an inserted `z¹` at `1.30`, an inserted `z⁻¹` at `0.99`, and the mis-paired
+vector `(0, 4, -4)` — same weight sum — at `0.73` (and it fails the equation outright at three
+points, relative error `0.58`–`1.06`).  The quotient itself is NOT identically `1`
+(`f(i) = 1.6944`, `f(0.3+0.7i) = 1.4192 - 0.1907i`), so the identity is not vacuous;
+`rPinLevelFourWeightZero_ne_zero_pin` is its Lean-side receipt.
+
+Three of the twenty-one footprints below are `does not depend on any axioms`
+(`rPinLevelFourWeightZero_values_pin`, `..._evidence_pairing`, `..._evidence_negative_exponents`,
+all closed by `decide` on a decidable proposition about the exponent vector alone), one is
+`[propext]` (`rPinLevelFourWeightZero_ne_zero_pin`), and the other seventeen are
+`[propext, Classical.choice, Quot.sound]`.  No `sorryAx` anywhere.  Must-fail control:
+`verification/SdfPin04NegControl.lean`.
+
+NAMING: `_weight_zero` is NOT `_zero_exp`.  `selfDual_eigen_pin_level_four_zero_exp` is the `r ≡ 0`
+pin at this same level (zero EXPONENTS); this node has zero WEIGHT with non-zero exponents, and
+`rPinLevelFourWeightZero_ne_zero_pin` is the receipt that the two vectors differ.  The node was
+PROPOSED as `selfDual_pin_weight_zero`, a name that would have joined the `selfDual_pin_*`
+CONJUNCTION family; the supplied statement was transcribed verbatim under that name and closed by
+the shipped theorem as a bare term application (`scratch_sdfpin04/VerbatimCheck.lean`).  And the
+condition `r δ = r (N / δ)` is SELF-DUAL (Fricke-symmetric), never "balanced". -/
+
+section SdfPin04
+
+/-- info: 'SocrateAI.ModularForms.rPinLevelFourWeightZero_values_pin' does not depend on any axioms -/
+#guard_msgs in #print axioms rPinLevelFourWeightZero_values_pin
+
+/-- info: 'SocrateAI.ModularForms.rPinLevelFourWeightZero_weight' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms rPinLevelFourWeightZero_weight
+
+/-- info: 'SocrateAI.ModularForms.rPinLevelFourWeightZero_dual_eq_pin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms rPinLevelFourWeightZero_dual_eq_pin
+
+/-- info: 'SocrateAI.ModularForms.selfDual_cond_pin_level_four_weight_zero' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_cond_pin_level_four_weight_zero
+
+/-- info: 'SocrateAI.ModularForms.selfDual_cond_pin_level_four_weight_zero_unfolded' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_cond_pin_level_four_weight_zero_unfolded
+
+/-- info: 'SocrateAI.ModularForms.rPinLevelFourWeightZeroMispaired_weight' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms rPinLevelFourWeightZeroMispaired_weight
+
+/-- info: 'SocrateAI.ModularForms.not_selfDual_pin_level_four_weight_zero_mispaired' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms not_selfDual_pin_level_four_weight_zero_mispaired
+
+/-- info: 'SocrateAI.ModularForms.rPinLevelFourWeightZero_ne_zero_pin' depends on axioms: [propext] -/
+#guard_msgs in #print axioms rPinLevelFourWeightZero_ne_zero_pin
+
+/-- info: 'SocrateAI.ModularForms.prod_zpow_pin_level_four_weight_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms prod_zpow_pin_level_four_weight_zero
+
+/-- info: 'SocrateAI.ModularForms.prod_zpow_selfDual_pin_level_four_weight_zero' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms prod_zpow_selfDual_pin_level_four_weight_zero
+
+/-- info: 'SocrateAI.ModularForms.sqrt_natPow_level_four_weight_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms sqrt_natPow_level_four_weight_zero
+
+/-- info: 'SocrateAI.ModularForms.frickeEigenvalue_pin_level_four_weight_zero' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms frickeEigenvalue_pin_level_four_weight_zero
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_four_weight_zero_regime_battery' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_four_weight_zero_regime_battery
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_four_weight_zero_eta' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_four_weight_zero_eta
+
+/-- info: 'SocrateAI.ModularForms.etaQuotient_dual_pin_level_four_weight_zero' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms etaQuotient_dual_pin_level_four_weight_zero
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_four_weight_zero_eta_via_fricke' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_four_weight_zero_eta_via_fricke
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_four_weight_zero_routes_agree' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_four_weight_zero_routes_agree
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_four_weight_zero_evidence_pairing' does not depend on any axioms -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_four_weight_zero_evidence_pairing
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_four_weight_zero_evidence_negative_exponents' does not depend on any axioms -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_four_weight_zero_evidence_negative_exponents
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_four_weight_zero_evidence_radicand_cancels' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_four_weight_zero_evidence_radicand_cancels
+
+/-- info: 'SocrateAI.ModularForms.selfDual_eigen_pin_level_four_weight_zero_no_evidence_constant' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound] -/
+#guard_msgs in #print axioms selfDual_eigen_pin_level_four_weight_zero_no_evidence_constant
+
+end SdfPin04
